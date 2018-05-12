@@ -1,6 +1,11 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
+#define BUTTON_UP 0b00000100
+#define BUTTON_DOWN 0b00001000
+#define BUTTON_LEFT 0b00010000
+#define BUTTON_RIGHT 0b00100000
+
 #define PLAYING  0
 #define LANDED 1
 #define RESTART 2
@@ -62,8 +67,11 @@ int piece_array[6][16] = {
   }
 };
 
+int read_buttons() {
+  return PORTB & 0b00111100;
+}
 
-void spi_write_byte(int c) {
+void display_write(int c) {
   for(int i=0;i<8;++i) {
     PORTB = 0b00000000;
     if((c & 1) == 1) {
@@ -87,7 +95,7 @@ void refresh() {
   for(int i=0;i<8;++i) {
     for(int k=0;k<8;++k) {
       for(int j=0;j<8;++j) {     
-	spi_write_byte(display[j][i]);   
+	display_write(display[j][i]);   
       }
     }
   }
@@ -199,7 +207,16 @@ int main (void){
     case PLAYING:
       // First, take piece off board
       draw_at(x,y,piece,WHITE);
-      // Now, apply user actions      
+      // Now, apply user actions
+      int buttons = read_buttons();
+      if(buttons & BUTTON_UP) {
+	rotate(piece);
+      } else if(buttons & BUTTON_LEFT) {
+	x = x - 1;
+      } else if(buttons & BUTTON_RIGHT) {
+	x = x + 1;
+      }
+      // Update the game state
       state = next_state(piece,x,y);
       // Now, apply gravity (if possible)
       if(state == PLAYING) {
