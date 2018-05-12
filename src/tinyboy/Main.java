@@ -4,17 +4,25 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 
-import javaavr.core.AVR;
-import javaavr.core.AvrDecoder;
-import javaavr.core.AvrExecutor;
-import javaavr.core.Wire;
-import javaavr.io.HexFile;
-import javaavr.peripherals.DotMatrixDisplay;
-import javaavr.util.ByteMemory;
-import javaavr.util.IoMemory;
-import javaavr.util.MultiplexedMemory;
-import javaavr.util.WireArrayPort;
+import javr.core.AVR;
+import javr.core.AvrDecoder;
+import javr.core.AvrExecutor;
+import javr.core.Wire;
+import javr.io.HexFile;
+import javr.memory.ByteMemory;
+import javr.memory.IoMemory;
+import javr.memory.MultiplexedMemory;
+import javr.peripherals.DotMatrixDisplay;
+import javr.util.WireArrayPort;
+import javrsim.peripherals.ConsolePeripheral;
+import javrsim.peripherals.DisplayPeripheral;
+import javrsim.peripherals.JPeripheral;
+import javrsim.views.CodeView;
+import javrsim.views.DataView;
+import javrsim.views.JAvrView;
+import javrsim.windows.SimulationWindow;
 import tinyboy.core.TinyBoyEmulator;
+import tinyboy.views.TinyBoyPeripheral;
 
 /**
  * A simple tool for generate test coverage information for the AVR simulator.
@@ -23,24 +31,27 @@ import tinyboy.core.TinyBoyEmulator;
  *
  */
 public class Main {
+	/**
+	 * The default set of peripherals.
+	 */
+	public static JPeripheral.Descriptor[] PERIPHERALS = {
 
+	};
+	/**
+	 * The default set of views.
+	 */
+	public static JAvrView.Descriptor[] VIEWS = {
+			CodeView.DESCRIPTOR,
+			DataView.DESCRIPTOR
+	};
 	public static void main(String[] args) throws IOException {
-		// Read hexfile and upload to emulator
-		HexFile.Reader hfr = new HexFile.Reader(new FileReader("tetris.hex"));
-		TinyBoyEmulator tbem = new TinyBoyEmulator();
-		tbem.upload(hfr.readAll());
-		// Print out display
-		System.out.println(tbem.getOutput());
-		// Clock 100000 cycles
-		for (int j = 0; j != 10; ++j) {
-			for (int i = 0; i != 1000000; ++i) {
-				tbem.clock();
-			}
-			// System.out.println(tbem.getOutput());
-		}
-		System.out.println("--");
-		System.out.println(tbem.getOutput());
-		System.out.println(tbem.getCoverage().cardinality() + " / 8192");
+		// Construct the tinyBoy emulator
+		TinyBoyEmulator tinyBoy = new TinyBoyEmulator();
+		// Construct the main simulation window
+		SimulationWindow sim = new SimulationWindow(tinyBoy.getAVR(), PERIPHERALS, VIEWS);
+		// Finally, construct the TinyBoy view
+		JPeripheral p = new TinyBoyPeripheral(tinyBoy);
+		sim.addPeripheral(p);
 	}
 
 }

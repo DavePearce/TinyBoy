@@ -7,9 +7,9 @@ import java.util.BitSet;
 import java.util.Iterator;
 import java.util.List;
 
-import javaavr.io.HexFile;
-import javaavr.util.BitList;
-import tinyboy.core.ButtonPad.Button;
+import javr.io.HexFile;
+import javr.util.BitList;
+import tinyboy.core.ControlPad.Button;
 import tinyboy.core.TinyBoyEmulator;
 
 /**
@@ -65,10 +65,10 @@ public class AutomatedFuzzTester {
 			boolean down = input.get(i+2);
 			boolean left = input.get(i+3);
 			// Apply the next set of inputs
-			tinyBoy.set(Button.UP,up);
-			tinyBoy.set(Button.DOWN,down);
-			tinyBoy.set(Button.LEFT,left);
-			tinyBoy.set(Button.RIGHT,right);
+			tinyBoy.setButtonState(Button.UP,up);
+			tinyBoy.setButtonState(Button.DOWN,down);
+			tinyBoy.setButtonState(Button.LEFT,left);
+			tinyBoy.setButtonState(Button.RIGHT,right);
 			// Finally, clock the tiny boy
 			tinyBoy.clock();
 		}

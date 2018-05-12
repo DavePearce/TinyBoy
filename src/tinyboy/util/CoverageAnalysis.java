@@ -2,8 +2,8 @@ package tinyboy.util;
 
 import java.util.BitSet;
 
-import javaavr.io.HexFile;
-import javaavr.util.ElasticByteMemory;
+import javr.io.HexFile;
+import javr.memory.ElasticByteMemory;
 
 /**
  * Provides a rudimentary tool for analyzing the (instruction and branch)

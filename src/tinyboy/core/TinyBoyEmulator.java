@@ -1,20 +1,16 @@
 package tinyboy.core;
 
-import java.util.BitSet;
-import java.util.Iterator;
-
-import javaavr.core.AVR;
-import javaavr.core.AvrDecoder;
-import javaavr.core.AvrExecutor;
-import javaavr.core.Wire;
-import javaavr.io.HexFile;
-import javaavr.peripherals.DotMatrixDisplay;
-import javaavr.peripherals.InputSimulation;
-import javaavr.util.ByteMemory;
-import javaavr.util.IoMemory;
-import javaavr.util.MultiplexedMemory;
-import javaavr.util.WireArrayPort;
-import tinyboy.util.ProfiledMemory;
+import javr.core.AVR;
+import javr.core.AvrDecoder;
+import javr.core.AvrExecutor;
+import javr.core.Wire;
+import javr.io.HexFile;
+import javr.memory.ByteMemory;
+import javr.memory.IoMemory;
+import javr.memory.MultiplexedMemory;
+import javr.peripherals.DotMatrixDisplay;
+import javr.util.IdealWire;
+import javr.util.WireArrayPort;
 
 /**
  * Provides a complete configuration of the simple game console, where inputs
@@ -26,52 +22,71 @@ import tinyboy.util.ProfiledMemory;
  *
  */
 public class TinyBoyEmulator {
-	// Port addresses for ATtiny85
-	public static final int PINB = 0x16;
-	public static final int DDRB = 0x17;
-	public static final int PORTB = 0x18;
-	// ATtiny85 configuration
-	private final Wire[] ioPinWires = new Wire[6];
-	private final WireArrayPort port = new WireArrayPort(PORTB, DDRB, PINB, ioPinWires);
-	private final AVR.Memory regs = new ByteMemory(32);
-	private final AVR.Memory io = new IoMemory(new ByteMemory(64), port);
-	private final AVR.Memory SRAM = new ByteMemory(512);
-	private final ProfiledMemory flash = new ProfiledMemory(new ByteMemory(8192));
-	private final AVR.Memory data = new MultiplexedMemory(regs, io, SRAM);
-	private final AVR avr = new AVR(new AvrDecoder(), new AvrExecutor(), flash, data);
-	// Peripherals
-	private final DotMatrixDisplay display = new DotMatrixDisplay(64, 64);
-	private final ButtonPad pad = new ButtonPad();
+	/**
+	 * The ATtiny85 Microcontroller which underpins the TinyBoy.
+	 */
+	private final AVR.Instrumentable avr;
+	/**
+	 * Represents the dot-matrix display on the TinyBoy.
+	 */
+	private final DotMatrixDisplay display;
+	/**
+	 * Represents the four directional buttons on the TinyBoy.
+	 */
+	private final ControlPad pad;
 
 	public TinyBoyEmulator() {
-		// Connect up the display
-		Wire[] outputs = display.getWires();
-		for (int i = 0; i != outputs.length; ++i) {
-			ioPinWires[i] = outputs[i];
-		}
-		// Connect the input "buttons". Observe that this overwrites the MISO and SS
-		// lines, which is fine as these are unused.
-		Wire[] inputs = pad.getWires();
-		ioPinWires[2] = inputs[0];
-		ioPinWires[3] = inputs[1];
-		ioPinWires[4] = inputs[2];
-		ioPinWires[5] = inputs[3];
+		// Construct the micro-controller
+		this.avr = constructATtiny85();
+		// Construct and connect components
+		Wire[] pins = avr.getPins();
+		// NOTE: we connect the display MISO and SS to LOW as they are not needed in
+		// this design, thereby freeing up pins for the button pad.
+		this.display = new DotMatrixDisplay(64, 64, new Wire[] { pins[1], pins[2], Wire.LOW, Wire.LOW });
+		this.pad = new ControlPad(pins[3],pins[4],pins[5],pins[6]);
+	}
+
+	public AVR.Instrumentable getAVR() {
+		return avr;
 	}
 
 	/**
-	 * Reset the AVR.
-	 */
-	public void reset() {
-		avr.reset();
-	}
-
-	/**
-	 * Get the current state of the display.
+	 * Get the width of the display in pixels.
 	 *
 	 * @return
 	 */
-	public String getOutput() {
-		return display.toString();
+	public int getDisplayWidth() {
+		return 64;
+	}
+
+	/**
+	 * Get the height of the display in pixels.
+	 *
+	 * @return
+	 */
+	public int getDisplayHeight() {
+		return 64;
+	}
+
+	/**
+	 * Check whether a given pixel is set or not.
+	 *
+	 * @param x
+	 * @param y
+	 * @return
+	 */
+	public boolean isPixelSet(int x, int y) {
+		return display.isSet(x, y);
+	}
+
+	/**
+	 * Get the current state of a given button.
+	 *
+	 * @param button
+	 * @return
+	 */
+	public boolean getButtonState(ControlPad.Button button) {
+		return pad.getState(button);
 	}
 
 	/**
@@ -80,8 +95,16 @@ public class TinyBoyEmulator {
 	 * @param button
 	 * @param value
 	 */
-	public void set(ButtonPad.Button button, boolean value) {
-		pad.set(button, value);
+	public void setButtonState(ControlPad.Button button, boolean value) {
+		pad.setState(button, value);
+	}
+
+	/**
+	 * Reset the TinyBoy.
+	 */
+	public void reset() {
+		// FIXME: should we reset the peripherals as well??
+		avr.reset();
 	}
 
 	/**
@@ -91,16 +114,7 @@ public class TinyBoyEmulator {
 	 * @param firmware
 	 */
 	public void upload(HexFile firmware) {
-		firmware.uploadTo(flash);
-	}
-
-	/**
-	 * Get the set of instructions which have been covered the simulation.
-	 *
-	 * @return
-	 */
-	public BitSet getCoverage() {
-		return flash.getReads();
+		firmware.uploadTo(avr.getCode());
 	}
 
 	/**
@@ -110,5 +124,36 @@ public class TinyBoyEmulator {
 		display.clock();
 		pad.clock();
 		avr.clock();
+	}
+
+	/**
+	 * Construct an AVR instance representing the ATtiny85. This needs to be
+	 * instrumentable so that we can add hooks for coverage testing, etc.
+	 *
+	 * @return
+	 */
+	public AVR.Instrumentable constructATtiny85() {
+		// This is the configuration for an ATTiny85.
+		final int PINB = 0x16;
+		final int DDRB = 0x17;
+		final int PORTB = 0x18;
+		// ATtiny has 8 pins.
+		Wire[] pins = new Wire[] { new IdealWire("+5V"), new IdealWire("PB0"), new IdealWire("PB1"),
+				new IdealWire("PB2"), new IdealWire("PB3"), new IdealWire("PB4"), new IdealWire("PB5"),
+				new IdealWire("GND") };
+		// ATtiny has a single port
+		WireArrayPort port = new WireArrayPort(PORTB, DDRB, PINB, pins[1], pins[2], pins[3], pins[4], pins[5], pins[6]);
+		// ATtiny has 32 general purpose registers.
+		AVR.Memory registers = new ByteMemory(32);
+		// ATtiny has 64 io registers
+		AVR.Memory io = new IoMemory(new ByteMemory(64), port);
+		// ATtiny has 512 bytes of SRAM
+		AVR.Memory SRAM = new ByteMemory(512);
+		// ATtiny has 8K programmable flash.
+		AVR.Memory flash = new ByteMemory(8192);
+		// Multiplex it all together.
+		AVR.Memory data = new MultiplexedMemory(registers, io, SRAM);
+		//
+		return new AVR.Instrumentable(new AvrDecoder(), new AvrExecutor(), pins, flash, data);
 	}
 }
