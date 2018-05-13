@@ -1,11 +1,14 @@
 package tinyboy.util;
 
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.BitSet;
 
 import javr.core.AVR.Memory;
 import javr.core.AvrDecoder;
 import javr.core.AvrInstruction;
 import javr.core.AvrInstruction.FlagRelativeAddress;
+import javr.core.AvrInstruction.RegisterRegister;
 import javr.core.AvrInstruction.RelativeAddress;
 import javr.io.HexFile;
 import javr.memory.ElasticByteMemory;
@@ -71,20 +74,57 @@ public class CoverageAnalysis {
 		return isReachableInstruction(address) && isConditionalBranch(disassembly[address]);
 	}
 
-	public boolean isConditionalBranchCovered(int address) {
-		if(isConditionalBranch(address)) {
-			AvrInstruction branch = disassembly[address];
-			int offset;
-			if(branch instanceof RelativeAddress) {
-				RelativeAddress ra = (RelativeAddress) branch;
-				offset = ra.k;
-			} else {
-				FlagRelativeAddress ra = (FlagRelativeAddress) branch;
-				offset = ra.k;
+	public boolean isConditionalBranchCovered(int pc) {
+		if (isConditionalBranch(pc)) {
+			AvrInstruction instruction = disassembly[pc];
+			pc = pc + instruction.getWidth();
+			int target;
+			switch (instruction.getOpcode()) {
+			case BRBC:
+			case BRBS: {
+				FlagRelativeAddress branch = (FlagRelativeAddress) instruction;
+				target = pc + branch.k;
+				break;
 			}
-			int falseBranch = address + branch.getWidth();
-			int trueBranch = falseBranch + offset;
-			return wasCovered(falseBranch) && wasCovered(trueBranch);
+			case BRCC:
+			case BRCS:
+			case BREQ:
+			case BRGE:
+			case BRHC:
+			case BRHS:
+			case BRID:
+			case BRIE:
+			case BRLO:
+			case BRLT:
+			case BRMI:
+			case BRNE:
+			case BRPL:
+			case BRSH:
+			case BRTC:
+			case BRTS:
+			case BRVC:
+			case BRVS: {
+				RelativeAddress branch = (RelativeAddress) instruction;
+				target = pc + branch.k;
+				//
+				break;
+			}
+			case CPSE:
+			case SBIC:
+			case SBIS:
+			case SBRC:
+			case SBRS: {
+				AvrInstruction following = disassembly[pc];
+				target = pc + following.getWidth();
+				//
+				break;
+			}
+			default:
+				throw new IllegalArgumentException("invalid conditional branch encountered: " + instruction);
+			}
+			// PC at next instruction
+			// TARGET at branch destination
+			return wasCovered(pc) && wasCovered(target);
 		} else {
 			return false;
 		}
@@ -201,6 +241,20 @@ public class CoverageAnalysis {
 			//
 			break;
 		}
+		case CPSE:
+		case SBIC:
+		case SBIS:
+		case SBRC:
+		case SBRS:{
+			// Explore the false branch
+			disassemble(pc, instructions, decoder, memory);
+			// Look at following instruction to know how to skip it.
+			AvrInstruction following = instructions[pc];
+			// Explore the true branch (i.e. after skipped instruction)
+			disassemble(pc + following.getWidth(), instructions, decoder, memory);
+			//
+			break;
+		}
 		case CALL: {
 			RelativeAddress branch = (RelativeAddress) instruction;
 			// Explore call target
@@ -274,6 +328,11 @@ public class CoverageAnalysis {
 		case BRTS:
 		case BRVC:
 		case BRVS:
+		case CPSE:
+		case SBIC:
+		case SBIS:
+		case SBRC:
+		case SBRS:
 			return true;
 		default:
 			return false;

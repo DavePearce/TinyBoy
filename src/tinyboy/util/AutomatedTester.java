@@ -32,13 +32,25 @@ public class AutomatedTester {
 	}
 
 	/**
-	 * Run the fuzzer for a given number of steps producing a coverage report.
+	 * Run the fuzzer for a given number of steps producing a coverage report. This
+	 * will run the tool for a maximum number of iterations, where each test is run
+	 * for a maximum number of cycles against a given coverage target. If the target
+	 * is achieved, the test stops immediately.
 	 *
+	 * @param iterations
+	 *            The number of iterations of fuzzing to perform. Each iteration
+	 *            consists of generating a new input based on previous inputs seen.
+	 * @param cycles
+	 *            The maximum number of cycles to run a test for. This is
+	 *            effectively a timeout to ensure tests don't go on forever.
+	 * @param target
+	 *            The target coverage and, once achieved, testing will stop.
 	 * @return
 	 */
-	public CoverageAnalysis run(int maxSteps, int cycles) {
+	public CoverageAnalysis run(int iterations, int cycles, double target) {
 		CoverageAnalysis analysis = new CoverageAnalysis(firmware);
-		for (int i = 0; i != maxSteps; ++i) {
+		int i = 0;
+		while (analysis.getBranchCoverage() < target && i < iterations) {
 			//
 			BitList inputs = generator.generate();
 			if (inputs != null) {
@@ -54,6 +66,7 @@ public class AutomatedTester {
 			} else {
 				break;
 			}
+			i = i + 1;
 		}
 		return analysis;
 	}
