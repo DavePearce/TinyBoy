@@ -12,6 +12,8 @@
 #define COLLIDED 3
 
 #define WHITE 0x00
+#define INTERNAL_a 0b10101001
+#define INTERNAL_b 0b10010101
 #define BLACK 0xFF
 
 int display[8][8];
@@ -95,8 +97,18 @@ void clear() {
 void refresh() {
   for(int i=0;i<8;++i) {
     for(int k=0;k<8;++k) {
-      for(int j=0;j<8;++j) {     
-	display_write(display[j][i]);   
+      for(int j=0;j<8;++j) {
+	if(display[j][i]) {
+	  if(k == 0 || k == 7) {
+	    display_write(BLACK);
+	  } else if((k%2) == 0) {
+	    display_write(INTERNAL_a);
+	  } else {
+	    display_write(INTERNAL_b);
+	  }
+	} else {
+	  display_write(WHITE);
+	}
       }
     }
   }

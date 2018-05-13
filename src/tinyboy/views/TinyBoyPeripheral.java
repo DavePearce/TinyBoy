@@ -43,8 +43,8 @@ public class TinyBoyPeripheral extends JPeripheral {
 		bp.requestFocus();
 		//
 		//
-		setBounds(0, 0, 300, 400);
-		setPreferredSize(new Dimension(300,400));
+		setBounds(0, 0, 300, 422);
+		setPreferredSize(new Dimension(300,422));
 		setResizable(false);
 		pack();
 		setVisible(true);
@@ -70,8 +70,9 @@ public class TinyBoyPeripheral extends JPeripheral {
 		 * @param height
 		 */
 		public DisplayPanel(int width, int height) {
-			setBounds(0, 0, width, height);
+			setBounds(0, 0, width+44, height+44);
 			setPreferredSize(new Dimension(width+44, height+44));
+			setMaximumSize(new Dimension(width+44, height+44));
 		}
 
 		@Override
@@ -92,8 +93,8 @@ public class TinyBoyPeripheral extends JPeripheral {
 		 * @param ph
 		 */
 		private void drawDisplay(Graphics g) {
-			int pw = getWidth() / tinyBoy.getDisplayWidth();
-			int ph = getHeight() / tinyBoy.getDisplayHeight();
+			int pw = (getWidth() - 44) / tinyBoy.getDisplayWidth();
+			int ph = (getHeight() - 44) / tinyBoy.getDisplayHeight();
 			//
 			for (int y = 0; y != tinyBoy.getDisplayHeight(); ++y) {
 				for (int x = 0; x != tinyBoy.getDisplayWidth(); ++x) {
