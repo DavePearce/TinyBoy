@@ -9,6 +9,7 @@
 #define PLAYING  0
 #define LANDED 1
 #define RESTART 2
+#define COLLIDED 3
 
 #define WHITE 0x00
 #define BLACK 0xFF
@@ -137,8 +138,10 @@ int next_state(int data[], int x, int y) {
             if(y == 8) { 
               // In this case, have reached ground
                return LANDED; 
-            } else if(x >= 0 && x < 8 && y >= 0 
-                      && y < 8 && display[x][y] != WHITE) {   
+            } else if(x < 0 || x >= 8) { 
+              // In this case, have collided with wall
+               return COLLIDED; 
+            } else if(y >= 0 && y < 8 && display[x][y] != WHITE) {   
               // In this case, have touched existing piece
               return LANDED + is_full;               
             }
@@ -211,10 +214,18 @@ int main (void){
       int buttons = read_buttons();
       if(buttons & BUTTON_UP) {
 	rotate(piece);
-      } else if(buttons & BUTTON_LEFT) {
-	x = x - 1;
+      } else if(buttons & BUTTON_DOWN) {
+	while(next_state(piece,x,y) != LANDED) {
+	  y = y + 1;
+	}
+      } else if((buttons & BUTTON_LEFT)) {
+	if(next_state(piece,x-1,y) == PLAYING) {
+	  x = x - 1;
+	}
       } else if(buttons & BUTTON_RIGHT) {
-	x = x + 1;
+	if(next_state(piece,x+1,y) == PLAYING) {
+	  x = x + 1;
+	}
       }
       // Update the game state
       state = next_state(piece,x,y);

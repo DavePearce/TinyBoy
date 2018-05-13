@@ -36,14 +36,23 @@ public class AutomatedFuzzTester {
 	 *
 	 * @return
 	 */
-	public CoverageAnalysis run(int maxSteps) {
+	public CoverageAnalysis run(int maxSteps, int cycles) {
 		CoverageAnalysis analysis = new CoverageAnalysis(firmware);
 		for (int i = 0; i != maxSteps; ++i) {
 			//
-			if (generator.hasNext()) {
-				BitList inputs = generator.next();
-				BitSet covered = fuzzTest(inputs);
+			BitList inputs = generator.generate();
+			if (inputs != null) {
+				// Perform the test
+				BitSet covered = fuzzTest(inputs, cycles);
+				// Register the output with the generator so that it can refine its strategy
+				// based on this.
+				generator.record(inputs, covered);
+				// Record the output with the coverage analysis so that we can subsequently
+				// compute coverage data.
+				System.out.println("REGISTERED: " + covered.cardinality() + " size");
 				analysis.record(covered);
+			} else {
+				break;
 			}
 		}
 		return analysis;
@@ -55,7 +64,7 @@ public class AutomatedFuzzTester {
 	 * @param input
 	 * @return
 	 */
-	private BitSet fuzzTest(BitList input) {
+	private BitSet fuzzTest(BitList input, int cycles) {
 		// Reset the tiny boy
 		tinyBoy.reset();
 		tinyBoy.upload(firmware);
@@ -63,17 +72,20 @@ public class AutomatedFuzzTester {
 		ReadWriteInstrument instrument = new ReadWriteInstrument();
 		tinyBoy.getAVR().getCode().register(instrument);
 		// Keep going until input is exhausted
-		for (int i = 0; (i + 3) < input.size(); i = i + 4) {
+		int max = Math.min(cycles, input.size() / 4);
+		//
+		for (int i = 0; i < max; i = i + 1) {
+			int ith = i << 2;
 			// Read the next set of inputs
-			boolean up = input.get(i);
-			boolean right = input.get(i+1);
-			boolean down = input.get(i+2);
-			boolean left = input.get(i+3);
+			boolean up = input.get(ith);
+			boolean right = input.get(ith + 1);
+			boolean down = input.get(ith + 2);
+			boolean left = input.get(ith + 3);
 			// Apply the next set of inputs
-			tinyBoy.setButtonState(Button.UP,up);
-			tinyBoy.setButtonState(Button.DOWN,down);
-			tinyBoy.setButtonState(Button.LEFT,left);
-			tinyBoy.setButtonState(Button.RIGHT,right);
+			tinyBoy.setButtonState(Button.UP, up);
+			tinyBoy.setButtonState(Button.DOWN, down);
+			tinyBoy.setButtonState(Button.LEFT, left);
+			tinyBoy.setButtonState(Button.RIGHT, right);
 			// Finally, clock the tiny boy
 			tinyBoy.clock();
 		}
@@ -92,7 +104,7 @@ public class AutomatedFuzzTester {
 	 * @return
 	 */
 	private boolean readNext(Iterator<Boolean> inputs) {
-		if(inputs.hasNext()) {
+		if (inputs.hasNext()) {
 			return inputs.next();
 		} else {
 			return false;
@@ -106,19 +118,21 @@ public class AutomatedFuzzTester {
 	 * @author David J. Pearce
 	 *
 	 */
-	public interface InputGenerator {
-		/**
-		 * Check whether there are any more inputs to generate.
-		 *
-		 * @return
-		 */
-		public boolean hasNext();
-
+	public interface InputGenerator<T extends BitList> {
 		/**
 		 * Get the next generated input.
 		 *
 		 * @return
 		 */
-		public BitList next();
+		public T generate();
+
+		/**
+		 * Record the result of a given test. That is, for a generated input, record the
+		 * actual output.
+		 *
+		 * @param input
+		 * @param output
+		 */
+		public void record(T input, BitSet output);
 	}
 }

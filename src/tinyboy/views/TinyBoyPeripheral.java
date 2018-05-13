@@ -15,6 +15,7 @@ import java.awt.event.MouseListener;
 import javax.swing.JPanel;
 
 import javr.core.AvrPeripheral;
+import javr.core.Wire;
 import javrsim.peripherals.JPeripheral;
 import tinyboy.core.ControlPad;
 import tinyboy.core.TinyBoyEmulator;
@@ -51,7 +52,6 @@ public class TinyBoyPeripheral extends JPeripheral {
 
 	@Override
 	public AvrPeripheral getPeripheral() {
-		// FIXME: need to update TinyBoy to be an AvrPeripheral.
 		return null;
 	}
 
