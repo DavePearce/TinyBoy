@@ -8,6 +8,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import javr.io.HexFile;
+import javr.memory.instruments.ReadWriteInstrument;
 import javr.util.BitList;
 import tinyboy.core.ControlPad.Button;
 import tinyboy.core.TinyBoyEmulator;
@@ -55,8 +56,12 @@ public class AutomatedFuzzTester {
 	 * @return
 	 */
 	private BitSet fuzzTest(BitList input) {
+		// Reset the tiny boy
 		tinyBoy.reset();
 		tinyBoy.upload(firmware);
+		// Attach the instrumentation
+		ReadWriteInstrument instrument = new ReadWriteInstrument();
+		tinyBoy.getAVR().getCode().register(instrument);
 		// Keep going until input is exhausted
 		for (int i = 0; (i + 3) < input.size(); i = i + 4) {
 			// Read the next set of inputs
@@ -72,8 +77,10 @@ public class AutomatedFuzzTester {
 			// Finally, clock the tiny boy
 			tinyBoy.clock();
 		}
-		// FIXME: this should be replaced with an instrumentation adaptor.
-		return tinyBoy.getCoverage();
+		// Remove the instrumentation
+		tinyBoy.getAVR().getCode().unregister(instrument);
+		// Extract the coverage data
+		return instrument.getReads();
 	}
 
 	/**
@@ -113,46 +120,5 @@ public class AutomatedFuzzTester {
 		 * @return
 		 */
 		public BitList next();
-	}
-
-	public static void main(String[] args) throws IOException {
-		TinyBoyEmulator tbem = new TinyBoyEmulator();
-		HexFile.Reader hfr = new HexFile.Reader(new FileReader("tetris.hex"));
-		HexFile firmware = hfr.readAll();
-		InputGenerator generator = new InputGenerator() {
-			private boolean next = true;
-			@Override
-			public boolean hasNext() {
-				return next;
-			}
-
-			@Override
-			public BitList next() {
-				next = false;
-				return new BitList() {
-
-					@Override
-					public int size() {
-						return 100000;
-					}
-
-					@Override
-					public boolean get(int ith) {
-						// TODO Auto-generated method stub
-						return false;
-					}
-
-					@Override
-					public void set(int ith, boolean value) {
-						// TODO Auto-generated method stub
-					}
-				};
-			}
-
-		};
-		// Create the tester
-		AutomatedFuzzTester tester = new AutomatedFuzzTester(tbem,firmware,generator);
-		CoverageAnalysis coverage = tester.run(10);
-		System.out.println("Coverage: " + coverage.getInstructionCoverage());
 	}
 }
