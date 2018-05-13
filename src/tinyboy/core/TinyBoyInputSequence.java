@@ -4,6 +4,16 @@ import java.util.Arrays;
 
 import javr.util.BitList;
 
+/**
+ * Represents a sequence of input values for the TinyBoy. The input sequence is
+ * split into a series of "pulses" of a given (fixed) length. Each pulse is
+ * either one of the buttons being pressed or nothing. For example, the sequence
+ * <code>"LLRR_"</code> consists of two pulses with the left button down, two
+ * with the right button down and one with nothing down.
+ *
+ * @author David J. Pearce
+ *
+ */
 public class TinyBoyInputSequence implements BitList {
 	/**
 	 * The number of inputs is determined by the number of buttons on the control
@@ -51,7 +61,7 @@ public class TinyBoyInputSequence implements BitList {
 
 	@Override
 	public int size() {
-		return size * width;
+		return (size * width) * NUM_INPUTS;
 	}
 
 	@Override
@@ -59,7 +69,8 @@ public class TinyBoyInputSequence implements BitList {
 		int index = ith / (NUM_INPUTS * width);
 		int input = ith % NUM_INPUTS;
 		ControlPad.Button pulse = pulses[index];
-		return pulse != null && pulse.ordinal() == input;
+		boolean r = pulse != null && pulse.ordinal() == input;
+		return r;
 	}
 
 	@Override
@@ -89,14 +100,6 @@ public class TinyBoyInputSequence implements BitList {
 			} else {
 				r += pulse.toString().charAt(0);
 			}
-		}
-		return r;
-	}
-
-	private String toBitString(boolean[] values) {
-		String r = "";
-		for (int i = 0; i != values.length; ++i) {
-			r += values[i] ? "1" : "0";
 		}
 		return r;
 	}

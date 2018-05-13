@@ -65,6 +65,7 @@ public class AutomatedTester {
 	 * @return
 	 */
 	private BitSet fuzzTest(BitList input, int cycles) {
+		int numButtons = Button.values().length;
 		// Reset the tiny boy
 		tinyBoy.reset();
 		tinyBoy.upload(firmware);
@@ -72,15 +73,15 @@ public class AutomatedTester {
 		ReadWriteInstrument instrument = new ReadWriteInstrument();
 		tinyBoy.getAVR().getCode().register(instrument);
 		// Keep going until input is exhausted
-		int max = Math.min(cycles, input.size() / 4);
+		int max = Math.min(cycles, input.size() / numButtons );
 		//
 		for (int i = 0; i < max; i = i + 1) {
-			int ith = i << 2;
+			int ith = i * numButtons;
 			// Read the next set of inputs
-			boolean up = input.get(ith);
-			boolean right = input.get(ith + 1);
-			boolean down = input.get(ith + 2);
-			boolean left = input.get(ith + 3);
+			boolean up = input.get(ith + Button.UP.ordinal());
+			boolean right = input.get(ith + Button.RIGHT.ordinal());
+			boolean down = input.get(ith + Button.DOWN.ordinal());
+			boolean left = input.get(ith + Button.LEFT.ordinal());
 			// Apply the next set of inputs
 			tinyBoy.setButtonState(Button.UP, up);
 			tinyBoy.setButtonState(Button.DOWN, down);
