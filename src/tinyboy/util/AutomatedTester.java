@@ -20,12 +20,12 @@ import tinyboy.core.TinyBoyEmulator;
  * @author David J. Pearce
  *
  */
-public class AutomatedFuzzTester {
+public class AutomatedTester {
 	private final TinyBoyEmulator tinyBoy;
 	private final HexFile firmware;
 	private final InputGenerator generator;
 
-	public AutomatedFuzzTester(TinyBoyEmulator tinyBoy, HexFile firmware, InputGenerator generator) {
+	public AutomatedTester(TinyBoyEmulator tinyBoy, HexFile firmware, InputGenerator generator) {
 		this.tinyBoy = tinyBoy;
 		this.firmware = firmware;
 		this.generator = generator;
@@ -44,12 +44,12 @@ public class AutomatedFuzzTester {
 			if (inputs != null) {
 				// Perform the test
 				BitSet covered = fuzzTest(inputs, cycles);
+				covered.and(analysis.getReachableInstructions());
 				// Register the output with the generator so that it can refine its strategy
 				// based on this.
 				generator.record(inputs, covered);
 				// Record the output with the coverage analysis so that we can subsequently
 				// compute coverage data.
-				System.out.println("REGISTERED: " + covered.cardinality() + " size");
 				analysis.record(covered);
 			} else {
 				break;

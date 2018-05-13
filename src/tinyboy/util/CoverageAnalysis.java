@@ -90,6 +90,19 @@ public class CoverageAnalysis {
 		}
 	}
 
+	public BitSet getReachableInstructions() {
+		BitSet b = new BitSet();
+		for (int i = 0; i != disassembly.length; ++i) {
+			AvrInstruction insn = disassembly[i];
+			if (insn != null) {
+				for(int j=0;j!=insn.getWidth();++j) {
+					b.set((i<<1)+j);
+				}
+			}
+		}
+		return b;
+	}
+
 	/**
 	 * Get the calculated instruction coverage from this analysis as a percentage.
 	 *
