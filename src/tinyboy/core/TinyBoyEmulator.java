@@ -103,8 +103,9 @@ public class TinyBoyEmulator {
 	 * Reset the TinyBoy.
 	 */
 	public void reset() {
-		// FIXME: should we reset the peripherals as well??
 		avr.reset();
+		pad.reset();
+		display.reset();
 	}
 
 	/**

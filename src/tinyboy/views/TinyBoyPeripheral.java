@@ -61,6 +61,12 @@ public class TinyBoyPeripheral extends JPeripheral {
 		repaint();
 	}
 
+	@Override
+	public void reset() {
+		tinyBoy.reset();
+		repaint();
+	}
+
 	private class DisplayPanel extends JPanel {
 		/**
 		 * Construct display canvas for a given width and height (in pixels). This

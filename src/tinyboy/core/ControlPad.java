@@ -38,6 +38,11 @@ public class ControlPad implements AvrPeripheral {
 		}
 	}
 
+	@Override
+	public void reset() {
+
+	}
+
 	/**
 	 * Read the current state of a given button.
 	 *

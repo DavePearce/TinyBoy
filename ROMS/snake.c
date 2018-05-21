@@ -367,7 +367,7 @@ void resetGame() {
   snake.head.y = 4;
   snake.numberOfSections = 1;
   snake.sections[0].direction = EAST;
-  snake.sections[0].length = 5;
+  snake.sections[0].length = 2;
 }
 
 // =========================================================
@@ -381,9 +381,9 @@ void gameOver() {
 }
 
 void main() {
-    drawSnake();
-    refresh();
-  /*
+  setup();
+  resetGame();
+  //
   while(1) {
     // Time for the next frame!
     // Check for change of direction
@@ -395,11 +395,10 @@ void main() {
     drawSnake();
     refresh();
     // Check for self collision
-    if(isTouchingSelf()) {
-      gameOver();
-    }
+    /* if(isTouchingSelf()) { */
+    /*   gameOver(); */
+    /* } */
     //
-    _delay_ms(1000);
+    _delay_ms(50);
   }
-  */
 }
