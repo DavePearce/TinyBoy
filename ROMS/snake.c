@@ -169,6 +169,27 @@ Direction getCurrentDirection() {
 }
 
 /**
+ * Make sure point properly wraps the display
+ */
+Point wrap(Point p) {
+  // Wrap x position
+  while(p.x < 0) {
+    p.x = p.x + 8;
+  }
+  while(p.x > 7) {
+    p.x = p.x - 8;
+  }
+  // Wrap y position
+  while(p.y < 0) {
+    p.y = p.y + 8;
+  }
+  while(p.y > 7) {
+    p.y = p.y - 8;
+  }
+  return p;
+}
+
+/**
  * Move a given point in a given direction
  */
 Point movePoint(Direction direction, Point p) {
@@ -187,9 +208,8 @@ Point movePoint(Direction direction, Point p) {
       break;
   }
   //
-  return p;
+  return wrap(p);
 }
-
 
 // =========================================================
 // Draw Snake
@@ -248,21 +268,25 @@ bool isTouchingSelf() {
 }
 
 void drawBlockSection(Point from, Point to) {
+  int count;
+  Direction dir;
+  //
   if (from.x != to.x) {
     // horizontal setion
-    int s = min(from.x, to.x);
-    int e = max(from.x, to.x);
-    for (int i = s; i <= e; i = i + 1) {
-      display[from.y][i] = BLACK;            
-    }
+    count = from.x - to.x;
+    dir = count < 0 ? EAST : WEST;
   } else {
     // vertical section
-    int s = min(from.y, to.y);
-    int e = max(from.y, to.y);
-    for (int i = s; i <= e; i = i + 1) {  
-      display[i][from.x] = BLACK;      
-    }
+    count = from.y - to.y;
+    dir = count < 0 ? SOUTH : NORTH;
   }
+  // Normalise count
+  count = count < 0 ? -count : count;
+  // Update the display
+  for (int i = 0; i < count; i = i + 1) {
+    from = movePoint(dir,from);    
+    display[from.x][from.y] = BLACK;
+  }  
 }
 
 Point drawSnakeSection(Point from, Section section) {
@@ -332,13 +356,13 @@ void updateDirection() {
   //
   int buttons = read_buttons();
   //  
-  if ((buttons & BUTTON_LEFT) != 0) {
+  if (buttons & BUTTON_LEFT) {
     nDirection = WEST;
-  } else if ((buttons & BUTTON_RIGHT) != 0) {
+  } else if (buttons & BUTTON_RIGHT) {
     nDirection = EAST;
-  } else if ((buttons & BUTTON_UP) != 0) {
+  } else if (buttons & BUTTON_UP) {
     nDirection = NORTH;
-  } else if ((buttons & BUTTON_DOWN) != 0) {
+  } else if (buttons & BUTTON_DOWN) {
     nDirection = SOUTH;
   } else {
     return;
@@ -367,7 +391,7 @@ void resetGame() {
   snake.head.y = 4;
   snake.numberOfSections = 1;
   snake.sections[0].direction = EAST;
-  snake.sections[0].length = 2;
+  snake.sections[0].length = 7;
 }
 
 // =========================================================
@@ -395,10 +419,10 @@ void main() {
     drawSnake();
     refresh();
     // Check for self collision
-    /* if(isTouchingSelf()) { */
-    /*   gameOver(); */
-    /* } */
+    if(isTouchingSelf()) {
+      gameOver();
+    }
     //
-    _delay_ms(50);
+    _delay_ms(100);
   }
 }

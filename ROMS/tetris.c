@@ -214,7 +214,10 @@ int main (void){
     case LANDED:
       //check_lines();
       initialise_piece(piece,piece_num);
-      piece_num = (piece_num + 1) % 6;
+      piece_num = piece_num + 1;
+      if(piece_num >= 6) {
+	piece_num = 0;
+      }
       state = PLAYING;
       x = 3;
       y = -2;
