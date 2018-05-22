@@ -40,7 +40,9 @@ public class ControlPad implements AvrPeripheral {
 
 	@Override
 	public void reset() {
-
+		for(int i=0;i!=wires.length;++i) {
+			wires[i].reset();
+		}
 	}
 
 	/**
