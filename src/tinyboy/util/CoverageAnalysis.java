@@ -86,8 +86,6 @@ public class CoverageAnalysis {
 				target = pc + branch.k;
 				break;
 			}
-			case BRCC:
-			case BRCS:
 			case BREQ:
 			case BRGE:
 			case BRHC:
@@ -215,8 +213,6 @@ public class CoverageAnalysis {
 			//
 			break;
 		}
-		case BRCC:
-		case BRCS:
 		case BREQ:
 		case BRGE:
 		case BRHC:
@@ -310,8 +306,6 @@ public class CoverageAnalysis {
 		switch(instruction.getOpcode()) {
 		case BRBC:
 		case BRBS:
-		case BRCC:
-		case BRCS:
 		case BREQ:
 		case BRGE:
 		case BRHC:
