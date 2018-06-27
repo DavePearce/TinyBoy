@@ -42,7 +42,7 @@ public class TinyBoyEmulator {
 		// this design, thereby freeing up pins for the button pad.
 		this.display = new DotMatrixDisplay(64, 64,
 				new Wire[] { avr.getPin("SCK"), avr.getPin("MOSI"), Wire.LOW, Wire.LOW });
-		this.pad = new ControlPad(avr.getPin("PB1"), avr.getPin("PB3"), avr.getPin("PB4"), avr.getPin("PB4"));
+		this.pad = new ControlPad(avr.getPin("PB1"), avr.getPin("PB3"), avr.getPin("PB4"), avr.getPin("PB5"));
 	}
 
 	public AVR.Instrumentable getAVR() {

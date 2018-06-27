@@ -1,6 +1,20 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include <math.h>
+#include "tinyboy.h"
+
+// =======================================
+// Sprites
+// =======================================
+
+int sprites[2][8] = {
+  {
+    0,0,0,0,0,0,0,0 // all off
+  },
+  {
+    0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff // all on
+  },
+};
 
 // =========================================================
 // Config
@@ -62,56 +76,11 @@ typedef struct Snake {
 Snake snake;
 
 // =========================================================
-// IO Functions
-// =========================================================
-
-int display[8][8];
-
-#define BUTTON_UP 0b00000100
-#define BUTTON_DOWN 0b00001000
-#define BUTTON_LEFT 0b00010000
-#define BUTTON_RIGHT 0b00100000
-
-#define WHITE 0x00
-#define BLACK 0xFF
-
-int read_buttons() {
-  return PORTB & 0b00111100;
-}
-
-void display_write(int c) {
-  for(int i=0;i<8;++i) {
-    PORTB = 0b00000000;
-    if((c & 1) == 1) {
-      PORTB = 0b00000011;
-    } else {
-      PORTB = 0b00000001;
-    }
-    c = c >> 1;
-  }
-}
-
-void clear() {
-  for(int i=0;i!=8;++i) {
-    for(int j=0;j!=8;++j) {
-      display[i][j] = 0;
-    }  
-  }
-}
-
-void refresh() {
-  for(int i=0;i<8;++i) {
-    for(int k=0;k<8;++k) {
-      for(int j=0;j<8;++j) {
-	display_write(display[j][i]);	
-      }
-    }
-  }
-}
-
-// =========================================================
 // Misc Stuff
 // =========================================================
+
+#define WHITE 0x00
+#define BLACK 0x01
 
 int min(int x, int y) {
   if(x < y) {
@@ -399,7 +368,7 @@ void resetGame() {
 // =========================================================
 
 void gameOver() {
-  clear();
+  display_fill(0);
   resetGame();
   _delay_ms(1000);
 }
@@ -415,9 +384,9 @@ void main() {
     // Move snake in current direction
     moveSnake();        
     // Draw snake
-    clear();
+    display_fill(0);
     drawSnake();
-    refresh();
+    display_refresh(sprites);
     // Check for self collision
     if(isTouchingSelf()) {
       gameOver();

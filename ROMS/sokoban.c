@@ -1,5 +1,6 @@
 #include <avr/io.h>
 #include <util/delay.h>
+#include "tinyboy.h"
 
 // =========================================================
 // Types
@@ -18,30 +19,9 @@ int rock_y;
 // IO Functions
 // =========================================================
 
-#define BUTTON_UP 0b00000100
-#define BUTTON_DOWN 0b00001000
-#define BUTTON_LEFT 0b00010000
-#define BUTTON_RIGHT 0b00100000
-
 #define WHITE 0x00
 #define GREY  0b10000001
 #define BLACK 0xFF
-
-int read_buttons() {
-  return PORTB & 0b00111100;
-}
-
-void display_write(int c) {
-  for(int i=0;i<8;++i) {
-    PORTB = 0b00000000;
-    if((c & 1) == 1) {
-      PORTB = 0b00000011;
-    } else {
-      PORTB = 0b00000001;
-    }
-    c = c >> 1;
-  }
-}
 
 void refresh() {
   for(int i=0;i<8;++i) {

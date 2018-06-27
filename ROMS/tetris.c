@@ -1,26 +1,60 @@
 #include <avr/io.h>
 #include <util/delay.h>
-
-#define SCK 0b00000100
-#define MOSI 0b00000001
-
-#define BUTTON_UP    0b00000010
-#define BUTTON_DOWN  0b00001000
-#define BUTTON_LEFT  0b00010000
-#define BUTTON_RIGHT 0b00100000
-#define BUTTON_MASK  0b00111010
+#include "tinyboy.h"
 
 #define PLAYING  0
 #define LANDED 1
 #define RESTART 2
 #define COLLIDED 3
 
-#define WHITE 0x00
-#define INTERNAL_a 0b10101001
-#define INTERNAL_b 0b10010101
-#define BLACK 0xFF
+#define EMPTY 0x00
 
-int display[8][8];
+// =======================================
+// Sprites
+// =======================================
+
+int sprites[5][8] = {
+  {
+    0,0,0,0,0,0,0,0 // all off
+  },
+  {
+    0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff // all on
+  },
+  {
+    0b11111111,
+    0b10000001,
+    0b10000001,
+    0b10000001,
+    0b10000001,
+    0b10000001,
+    0b10000001,
+    0b11111111
+  },
+  {
+    0b11111111,
+    0b10100101,
+    0b10010011,
+    0b11001001,
+    0b10100101,
+    0b10010011,
+    0b11001001,
+    0b11111111
+  },  
+  {
+    0b11111111,
+    0b10101011,
+    0b11010101,
+    0b10101011,
+    0b11010101,
+    0b10101011,
+    0b11010101,
+    0b11111111
+  }
+};
+
+// =======================================
+// Pieces
+// =======================================
 
 const int I_PIECE = 0;
 const int J_PIECE = 1;
@@ -74,50 +108,6 @@ int piece_array[6][16] = {
   }
 };
 
-int read_buttons() {
-  return PORTB & BUTTON_MASK;
-}
-
-void display_write(int c) {
-  for(int i=0;i<8;++i) {
-    PORTB = 0b00000000;
-    if((c & 1) == 1) {
-      PORTB = SCK | MOSI;
-    } else {
-      PORTB = SCK;
-    }
-    c = c >> 1;
-  }
-}
-
-void clear() {
-  for(int i=0;i!=8;++i) {
-    for(int j=0;j!=8;++j) {
-      display[i][j] = 0;
-    }  
-  }
-}
-
-void refresh() {
-  for(int i=0;i<8;++i) {
-    for(int k=0;k<8;++k) {
-      for(int j=0;j<8;++j) {
-	if(display[j][i]) {
-	  if(k == 0 || k == 7) {
-	    display_write(BLACK);
-	  } else if((k%2) == 0) {
-	    display_write(INTERNAL_a);
-	  } else {
-	    display_write(INTERNAL_b);
-	  }
-	} else {
-	  display_write(WHITE);
-	}
-      }
-    }
-  }
-}
-
 /* === Tetris Functions === */
 
 void initialise_piece(int data[], int piece) {
@@ -157,7 +147,7 @@ int next_state(int data[], int x, int y) {
             } else if(x < 0 || x >= 8) { 
               // In this case, have collided with wall
                return COLLIDED; 
-            } else if(y >= 0 && y < 8 && display[x][y] != WHITE) {   
+            } else if(y >= 0 && y < 8 && display_read(x,y) != EMPTY) {   
               // In this case, have touched existing piece
               return LANDED + is_full;               
             }
@@ -181,7 +171,7 @@ void draw_at(int x, int y, int data[], int color) {
          // need to clip
          if(x >= 0 && x < 8 && y >= 0 && y < 8) {       
            if(data[(i*4)+j] == 1) {
-             display[x][y] = color;
+	     display_draw(x,y,color);
            } 
          }
          x = x + 1;
@@ -192,7 +182,8 @@ void draw_at(int x, int y, int data[], int color) {
 
 /* === Game Loop === */
 
-int state = RESTART; 
+int state = RESTART;
+int sprite = 0;
 int piece_num = 0;
 int piece[16];
 int x = 3;
@@ -207,12 +198,12 @@ void setup() {
 int main (void){
   // Configure
   setup();
-  clear();
+  display_fill(0);
   //
   while(1) {
     switch(state) {
     case RESTART: 
-      clear();
+      display_fill(0);
       state = LANDED;
       break;
     case LANDED:
@@ -222,13 +213,17 @@ int main (void){
       if(piece_num >= 6) {
 	piece_num = 0;
       }
+      sprite = sprite + 1;
+      if(sprite > 4) {
+	sprite = 1;
+      }
       state = PLAYING;
       x = 3;
       y = -2;
       break;
     case PLAYING:
       // First, take piece off board
-      draw_at(x,y,piece,WHITE);
+      draw_at(x,y,piece,EMPTY);
       // Now, apply user actions
       int buttons = read_buttons();
       if(buttons & BUTTON_UP) {
@@ -255,10 +250,10 @@ int main (void){
       }
       // Third put piece on board in 
       // new position
-      draw_at(x,y,piece,BLACK);
+      draw_at(x,y,piece,sprite);
       // Refresh display
-      refresh();
-      _delay_ms(50);      
+      display_refresh(sprites);
+      _delay_ms(100);      
       break;
     }      
   }
