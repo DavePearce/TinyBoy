@@ -1,6 +1,7 @@
 package tinyboy.core;
 
 import javr.core.AVR;
+import javr.core.AvrConfiguration;
 import javr.core.AvrDecoder;
 import javr.core.AvrExecutor;
 import javr.core.Wire;
@@ -10,7 +11,6 @@ import javr.memory.IoMemory;
 import javr.memory.MultiplexedMemory;
 import javr.peripherals.DotMatrixDisplay;
 import javr.util.IdealWire;
-import javr.util.WireArrayPort;
 
 /**
  * Provides a complete configuration of the simple game console, where inputs
@@ -37,13 +37,12 @@ public class TinyBoyEmulator {
 
 	public TinyBoyEmulator() {
 		// Construct the micro-controller
-		this.avr = constructATtiny85();
-		// Construct and connect components
-		Wire[] pins = avr.getPins();
+		this.avr = AvrConfiguration.instantiate("ATtiny85");
 		// NOTE: we connect the display MISO and SS to LOW as they are not needed in
 		// this design, thereby freeing up pins for the button pad.
-		this.display = new DotMatrixDisplay(64, 64, new Wire[] { pins[1], pins[2], Wire.LOW, Wire.LOW });
-		this.pad = new ControlPad(pins[3],pins[4],pins[5],pins[6]);
+		this.display = new DotMatrixDisplay(64, 64,
+				new Wire[] { avr.getPin("SCK"), avr.getPin("MOSI"), Wire.LOW, Wire.LOW });
+		this.pad = new ControlPad(avr.getPin("PB1"), avr.getPin("PB3"), avr.getPin("PB4"), avr.getPin("PB4"));
 	}
 
 	public AVR.Instrumentable getAVR() {
@@ -125,36 +124,5 @@ public class TinyBoyEmulator {
 		display.clock();
 		pad.clock();
 		avr.clock();
-	}
-
-	/**
-	 * Construct an AVR instance representing the ATtiny85. This needs to be
-	 * instrumentable so that we can add hooks for coverage testing, etc.
-	 *
-	 * @return
-	 */
-	public AVR.Instrumentable constructATtiny85() {
-		// This is the configuration for an ATTiny85.
-		final int PINB = 0x16;
-		final int DDRB = 0x17;
-		final int PORTB = 0x18;
-		// ATtiny has 8 pins.
-		Wire[] pins = new Wire[] { new IdealWire("+5V"), new IdealWire("PB0"), new IdealWire("PB1"),
-				new IdealWire("PB2"), new IdealWire("PB3"), new IdealWire("PB4"), new IdealWire("PB5"),
-				new IdealWire("GND") };
-		// ATtiny has a single port
-		WireArrayPort port = new WireArrayPort(PORTB, DDRB, PINB, pins[1], pins[2], pins[3], pins[4], pins[5], pins[6]);
-		// ATtiny has 32 general purpose registers.
-		AVR.Memory registers = new ByteMemory(32);
-		// ATtiny has 64 io registers
-		AVR.Memory io = new IoMemory(new ByteMemory(64), port);
-		// ATtiny has 512 bytes of SRAM
-		AVR.Memory SRAM = new ByteMemory(512);
-		// ATtiny has 8K programmable flash.
-		AVR.Memory flash = new ByteMemory(8192);
-		// Multiplex it all together.
-		AVR.Memory data = new MultiplexedMemory(registers, io, SRAM);
-		//
-		return new AVR.Instrumentable(new AvrExecutor(flash.size(),new AvrDecoder()), pins, flash, data);
 	}
 }

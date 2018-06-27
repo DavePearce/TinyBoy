@@ -13,7 +13,6 @@ import javr.memory.ByteMemory;
 import javr.memory.IoMemory;
 import javr.memory.MultiplexedMemory;
 import javr.peripherals.DotMatrixDisplay;
-import javr.util.WireArrayPort;
 import javrsim.peripherals.ConsolePeripheral;
 import javrsim.peripherals.DisplayPeripheral;
 import javrsim.peripherals.JPeripheral;

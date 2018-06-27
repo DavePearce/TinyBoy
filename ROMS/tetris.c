@@ -1,10 +1,14 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
-#define BUTTON_UP 0b00000100
-#define BUTTON_DOWN 0b00001000
-#define BUTTON_LEFT 0b00010000
+#define SCK 0b00000100
+#define MOSI 0b00000001
+
+#define BUTTON_UP    0b00000010
+#define BUTTON_DOWN  0b00001000
+#define BUTTON_LEFT  0b00010000
 #define BUTTON_RIGHT 0b00100000
+#define BUTTON_MASK  0b00111010
 
 #define PLAYING  0
 #define LANDED 1
@@ -71,16 +75,16 @@ int piece_array[6][16] = {
 };
 
 int read_buttons() {
-  return PORTB & 0b00111100;
+  return PORTB & BUTTON_MASK;
 }
 
 void display_write(int c) {
   for(int i=0;i<8;++i) {
     PORTB = 0b00000000;
     if((c & 1) == 1) {
-      PORTB = 0b00000011;
+      PORTB = SCK | MOSI;
     } else {
-      PORTB = 0b00000001;
+      PORTB = SCK;
     }
     c = c >> 1;
   }
@@ -196,7 +200,7 @@ int y = -2;
 
 void setup() {
   // set SCLK, MOSI, MISO, SS to be output
-  DDRB = 0b00001111;
+  DDRB = SCK | MOSI;
   PORTB = 0b00000000;
 }
 
