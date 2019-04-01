@@ -4,7 +4,7 @@ DEVICE      = attiny85
 CLOCK      = 16000000UL
 PROGRAMMER = -c usbtiny 
 AVRDUDE = avrdude $(PROGRAMMER) -p $(DEVICE)
-COMPILE = avr-gcc -Wall -Os -std=c99 -DF_CPU=$(CLOCK) -mmcu=$(DEVICE)
+COMPILE = avr-gcc -fstack-usage -Wall -Os -std=c99 -DF_CPU=$(CLOCK) -mmcu=$(DEVICE)
 
 TARGETS = fader.hex sokoban.hex tetris.hex snake.hex
 

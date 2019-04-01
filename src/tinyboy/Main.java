@@ -1,20 +1,7 @@
 package tinyboy;
 
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 
-import javr.core.AVR;
-import javr.core.AvrDecoder;
-import javr.core.AvrExecutor;
-import javr.core.Wire;
-import javr.io.HexFile;
-import javr.memory.ByteMemory;
-import javr.memory.IoMemory;
-import javr.memory.MultiplexedMemory;
-import javr.peripherals.DotMatrixDisplay;
-import javrsim.peripherals.ConsolePeripheral;
-import javrsim.peripherals.DisplayPeripheral;
 import javrsim.peripherals.JPeripheral;
 import javrsim.views.CodeView;
 import javrsim.views.DataView;

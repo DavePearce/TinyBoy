@@ -10,6 +10,7 @@ import javr.memory.ByteMemory;
 import javr.memory.IoMemory;
 import javr.memory.MultiplexedMemory;
 import javr.peripherals.DotMatrixDisplay;
+import javr.ports.InputOutputPort;
 import javr.util.IdealWire;
 
 /**
