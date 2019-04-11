@@ -41,8 +41,8 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-    	<groupId>whiley</groupId>
-    	<artifactId>javaavr</artifactId>
+    	<groupId>org.whiley</groupId>
+    	<artifactId>javr</artifactId>
     	<version>1.0</version>
     </dependency>
   </dependencies>
