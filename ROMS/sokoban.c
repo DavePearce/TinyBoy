@@ -1,6 +1,6 @@
 #include <avr/io.h>
 #include <util/delay.h>
-#include "tinyboy.h"
+#include "tinyboy2.h"
 
 // =========================================================
 // Types
@@ -15,36 +15,54 @@ int player_y;
 int rock_x;
 int rock_y;
 
+// =======================================
+// Sprites
+// =======================================
+
+uint8_t sprites[5][4] = {
+  {
+    0,0,0,0 // all off
+  },
+  {
+    0b1111,
+    0b1001,
+    0b1001,    
+    0b1111
+  },
+  { 
+    0b0111,
+    0b1100,
+    0b1100,    
+    0b0111
+  }, 
+  { 
+    0b1110,
+    0b0011,
+    0b0011,    
+    0b1110
+  }, 
+  {
+    0b1000,
+    0b0010,
+    0b0100,    
+    0b0010
+  } 
+};
+
 // =========================================================
 // IO Functions
 // =========================================================
 
-#define WHITE 0x00
-#define GREY  0b10000001
-#define BLACK 0xFF
-
 void refresh() {
-  for(int i=0;i<8;++i) {
-    for(int k=0;k<8;++k) {
-      for(int j=0;j<8;++j) {
-	if(i == player_y && j == player_x) {
-	  display_write(BLACK);
-	} else if(i == rock_y && j == rock_x) {
-	  if(k == 0 || k == 7) {
-	    display_write(BLACK);
-	  } else {
-	    display_write(GREY);
-	  }
-	} else {
-	  display_write(WHITE);
-	}
-      }
-    }
-  }
+  // Empty display
+  display_fill(0);
+  display_draw(player_x,player_y,2);
+  /* display_draw(rock_x,rock_y,1); */
+  display_refresh(sprites);
 }
 
-int withinBounds(int x, int y) {
-  return (x >= 0 && x < 8) && (y >= 0 && y < 8);
+int withinBounds (int x, int y) {
+  return (x >= 0 && x < 16) && (y >= 0 && y < 16);
 }
 
 void setup() {
@@ -58,55 +76,67 @@ void setup() {
   rock_y = 1;
 }
 
+void clock(int buttons) {
+  int dx = 0;
+  int dy = 0;
+  //
+  switch(buttons) {
+  case BUTTON_UP:
+    dy = -1;
+    break;
+  case BUTTON_DOWN:
+    dy = +1;
+    break;
+  case BUTTON_LEFT:
+    dx = -1;
+    break;
+  case BUTTON_RIGHT:
+    dx = +1;
+    break;
+  }
+  //
+  int nx = player_x + dx;
+  int ny = player_y + dy;    
+  // Attempt to make the move
+  if(withinBounds(nx,ny)) {
+    // Check about moving rock
+    if(nx == rock_x && ny == rock_y) {
+      int rx = rock_x + dx;
+      int ry = rock_y + dy;    	
+      // Attemp to push rock
+      if(withinBounds(rx,ry)) {
+	// All looks good.
+	player_x = nx;
+	player_y = ny;
+	rock_x = rx;
+	rock_y = ry;	
+      }
+    } else {
+      player_x = nx;
+      player_y = ny;
+    }
+    // Refresh Display
+    refresh();    
+  }
+}
+
 int main() {
+  setup();
   // Setup stuff
   setup();
   // Run
   while(1) {
-    int dx = 0;
-    int dy = 0;
-    // Read user input
-    int buttons = read_buttons();    
-    //
-    switch(buttons) {
-    case BUTTON_UP:
-      dy = -1;
-      break;
-    case BUTTON_DOWN:
-      dy = +1;
-      break;
-    case BUTTON_LEFT:
-      dx = -1;
-      break;
-    case BUTTON_RIGHT:
-      dx = +1;
-      break;
-    }
-    //
-    int nx = player_x + dx;
-    int ny = player_y + dy;    
-    // Attempt to make the move
-    if(withinBounds(nx,ny)) {
-      // Check about moving rock
-      if(nx == rock_x && ny == rock_y) {
-	int rx = rock_x + dx;
-	int ry = rock_y + dy;    	
-	// Attemp to push rock
-	if(withinBounds(rx,ry)) {
-	  // All looks good.
-	  player_x = nx;
-	  player_y = ny;
-	  rock_x = rx;
-	  rock_y = ry;	
-	}
-      } else {
-	player_x = nx;
-	player_y = ny;
+    int buttons = 0;
+    // delay loop
+    for(int i=0;i<1000;++i) {
+      for(int j=0;j<100;++j) {      
+	// record any buttons pressed between frames
+	buttons |= read_buttons();
       }
-      // Refresh Display
-      refresh();    
     }
-    // Delay
-    _delay_ms(50);
+    // refresh
+    clock(buttons);
   }
+
+  return 1;
 }

@@ -7,13 +7,83 @@
 // Sprites
 // =======================================
 
-int sprites[2][8] = {
+#define SPACE 0x00
+#define HEAD_N 0x01
+#define HEAD_S 0x02
+#define HEAD_E 0x03
+#define HEAD_W 0x04
+#define BODY_NS 0x05
+#define BODY_EW 0x06
+#define JOINT_NE 0x07
+#define JOINT_SE 0x08
+#define JOINT_NW 0x09
+#define JOINT_SW 0x0A
+
+uint8_t sprites[][4] = {
   {
-    0,0,0,0,0,0,0,0 // all off
+    0,0,0,0 // all off
   },
-  {
-    0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff // all on
+  { // Head North
+    0b0110,
+    0b0110,
+    0b1010,    
+    0b0110
+  }, 
+  { // Head South
+    0b0110,    
+    0b1010,
+    0b0110,
+    0b0110    
   },
+  { // Head East
+    0b0100,
+    0b1011,
+    0b1111,    
+    0b0000
+  }, 
+  { // Head West
+    0b0010,
+    0b1101,
+    0b1111,    
+    0b0000
+  },  
+  { // Body North/South
+    0b0110,    
+    0b0010,
+    0b0100,
+    0b0110    
+  },
+  { // Body East/West
+    0b0000,    
+    0b1101,
+    0b1011,
+    0b0000    
+  },
+  { // North-->East
+    0b0000,    
+    0b0011,
+    0b0101,
+    0b0110    
+  },  
+  { // South-->East
+    0b0110,    
+    0b0101,
+    0b0011,
+    0b0000    
+  },
+  { // North-->West
+    0b0000,    
+    0b1100,
+    0b1010,
+    0b0110    
+  },
+  { // South-->West
+    0b0110,    
+    0b1010,
+    0b1100,
+    0b0000    
+  }
+    
 };
 
 // =========================================================
@@ -21,10 +91,10 @@ int sprites[2][8] = {
 // =========================================================
 
 typedef enum Direction { 
-  NORTH, 
-  SOUTH, 
-  EAST,
-  WEST 
+  NORTH = 0, 
+  SOUTH = 1, 
+  EAST = 2,
+  WEST = 3 
 } Direction;
 
 typedef struct Point {
@@ -79,23 +149,18 @@ Snake snake;
 // Misc Stuff
 // =========================================================
 
-#define WHITE 0x00
-#define BLACK 0x01
-
+/**
+ * Return the minimum of two integers
+ */
 int min(int x, int y) {
-  if(x < y) {
-    return x;
-  } else {
-    return y;
-  }
+  return (x < y) ? x : y;
 }
 
+/**
+ * Return the maximum of two integers
+ */
 int max(int x, int y) {
-  if(x > y) {
-    return x;
-  } else {
-    return y;
-  }
+  return (x > y) ? x : y;
 }
 
 /**
@@ -143,17 +208,17 @@ Direction getCurrentDirection() {
 Point wrap(Point p) {
   // Wrap x position
   while(p.x < 0) {
-    p.x = p.x + 8;
+    p.x = p.x + 16;
   }
-  while(p.x > 7) {
-    p.x = p.x - 8;
+  while(p.x > 15) {
+    p.x = p.x - 16;
   }
   // Wrap y position
   while(p.y < 0) {
-    p.y = p.y + 8;
+    p.y = p.y + 16;
   }
-  while(p.y > 7) {
-    p.y = p.y - 8;
+  while(p.y > 15) {
+    p.y = p.y - 16;
   }
   return p;
 }
@@ -236,7 +301,7 @@ bool isTouchingSelf() {
   return FALSE;
 }
 
-void drawBlockSection(Point from, Point to) {
+void drawSnakeBody(Point from, Point to) {
   int count;
   Direction dir;
   //
@@ -254,13 +319,55 @@ void drawBlockSection(Point from, Point to) {
   // Update the display
   for (int i = 0; i < count; i = i + 1) {
     from = movePoint(dir,from);    
-    display[from.x][from.y] = BLACK;
+    display[from.x][from.y] = BODY_NS + (dir/2);
   }  
 }
 
-Point drawSnakeSection(Point from, Section section) {
-   Point to = getEndPoint(from,section);   
-   drawBlockSection(from,to);
+Point drawSnakeHead(Point from, Section s1) {
+  Point to = getEndPoint(from,s1);
+  drawSnakeBody(from,to);  
+  display[from.x][from.y] = (HEAD_N + s1.direction);
+  return to;
+}
+
+#define NORTHEAST (NORTH + (EAST << 2))
+#define WESTSOUTH (WEST + (SOUTH << 2))
+#define SOUTHEAST (SOUTH + (EAST << 2))
+#define WESTNORTH (WEST + (NORTH << 2))
+#define NORTHWEST (NORTH + (WEST << 2))
+#define EASTSOUTH (EAST + (SOUTH << 2))
+#define SOUTHWEST (SOUTH + (WEST << 2))
+#define EASTNORTH (EAST + (NORTH << 2))
+
+void drawSnakeJoint(Point pt, Direction from, Direction to) {
+  uint8_t idx = to + (from << 2);
+  switch(idx) {
+  case NORTHEAST:
+  case WESTSOUTH:
+    idx = 0;
+    break;
+  case SOUTHEAST:
+  case WESTNORTH:
+    idx = 1;
+    break;
+  case NORTHWEST:
+  case EASTSOUTH:
+    idx = 2;
+    break;
+  default:
+  case SOUTHWEST:
+  case EASTNORTH:
+    idx = 3;
+    break;
+  }
+  // Done
+  display[pt.x][pt.y] = (JOINT_NE + idx);
+}
+
+Point drawSnakeSection(Point from, Section s0, Section s1) {
+   Point to = getEndPoint(from,s1);
+   drawSnakeBody(from,to);
+   drawSnakeJoint(from,s0.direction,s1.direction);
    return to;
 }
 
@@ -268,10 +375,13 @@ void drawSnake() {
   // Check for change of direction
   //
   Point pos = snake.head;
-  //
-  for (int i = 0; i < snake.numberOfSections; ++i) {
-    pos = drawSnakeSection(pos,snake.sections[i]);
-  }
+  int n = snake.numberOfSections;
+  // Draw the snake head
+  pos = drawSnakeHead(pos,snake.sections[0]);
+  // Draw remaining sections
+  for (int i = 1; i < n; ++i) {
+    pos = drawSnakeSection(pos,snake.sections[i-1],snake.sections[i]);
+  }  
 }
 
 // =========================================================
@@ -391,7 +501,7 @@ void clock(int buttons) {
   }
 }
 
-void main() {
+int main() {
   setup();
   resetGame();
   //
@@ -407,4 +517,6 @@ void main() {
     // refresh
     clock(buttons);
   }
+  // Dead code
+  return 0;
 }
