@@ -19,7 +19,7 @@ public class TinyBoyInputSequence implements BitList {
 	 * The number of inputs is determined by the number of buttons on the control
 	 * pad.
 	 */
-	private final int NUM_INPUTS = ControlPad.Button.values().length;
+	private final static int NUM_INPUTS = ControlPad.Button.values().length;
 	/**
 	 * The sequence of button push pulses.
 	 */
@@ -28,10 +28,6 @@ public class TinyBoyInputSequence implements BitList {
 	 * The width of a single pulse.
 	 */
 	private final int width;
-	/**
-	 * The number of pulse in the sequence.
-	 */
-	private final int size;
 
 	/**
 	 * Create a new input sequence with a give number of pulses (i.e. button pushes)
@@ -45,7 +41,6 @@ public class TinyBoyInputSequence implements BitList {
 	public TinyBoyInputSequence(int size, int width) {
 		this.pulses = new ControlPad.Button[size];
 		this.width = width;
-		this.size = size;
 	}
 
 	/**
@@ -55,13 +50,25 @@ public class TinyBoyInputSequence implements BitList {
 	 */
 	public TinyBoyInputSequence(TinyBoyInputSequence list) {
 		this.width = list.width;
-		this.size = list.size;
-		this.pulses = Arrays.copyOf(list.pulses, size);
+		this.pulses = Arrays.copyOf(list.pulses, list.pulses.length);
+	}
+
+	private TinyBoyInputSequence(int width, ControlPad.Button[] pulses) {
+		this.width = width;
+		this.pulses = pulses;
 	}
 
 	@Override
 	public int size() {
-		return (size * width) * NUM_INPUTS;
+		return (pulses.length * width) * NUM_INPUTS;
+	}
+
+	/**
+	 * Returns the number of pulses in this sequence.
+	 * @return
+	 */
+	public int length() {
+		return pulses.length;
 	}
 
 	@Override
@@ -89,6 +96,50 @@ public class TinyBoyInputSequence implements BitList {
 	public void setPulse(int pulse, ControlPad.Button button) {
 		pulses[pulse] = button;
 	}
+
+	/**
+	 * Append a new pulse onto the end of this input sequence.
+	 *
+	 * @param pulse
+	 * @return
+	 */
+	public TinyBoyInputSequence append(ControlPad.Button pulse) {
+		final int len = pulses.length;
+		TinyBoyInputSequence s = new TinyBoyInputSequence(width, Arrays.copyOf(pulses, len + 1));
+		s.pulses[len] = pulse;
+		return s;
+	}
+
+	/**
+	 * Append a sequence of pulses onto the end of this input sequence.
+	 *
+	 * @param button
+	 * @return
+	 */
+	public TinyBoyInputSequence append(ControlPad.Button[] nPulses) {
+		final int n = pulses.length;
+		final int m = nPulses.length;
+		// Create sequence of appropriate length.
+		TinyBoyInputSequence s = new TinyBoyInputSequence(n + m, width);
+		// Copy pulses over
+		System.arraycopy(pulses, 0, s.pulses, 0, n);
+		System.arraycopy(nPulses, 0, s.pulses, n, nPulses.length);
+		// Done
+		return s;
+	}
+
+	public String toBitString() {
+		String r = "";
+		for (int i = 0; i < size(); ++i) {
+			if(get(i)) {
+				r += "1";
+			} else {
+				r += "0";
+			}
+		}
+		return r;
+	}
+
 
 	@Override
 	public String toString() {

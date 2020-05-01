@@ -17,11 +17,11 @@ all: $(TARGETS)
 	$(COMPILE) -c -o $@ $<
 
 %.elf: %.o
-	$(COMPILE) -o $@ $< 
+	$(COMPILE) -Xlinker -Map=$@.map -o $@ $< 
 
 %.hex: %.elf
 	avr-objcopy -j .text -j .data -O ihex $< $@
 	avr-size --format=avr --mcu=$(DEVICE) $<
 
 clean:
-	rm -f *.hex *.elf *.o
+	rm -f *.hex *.elf *.o *.map

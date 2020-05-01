@@ -7,6 +7,7 @@ import java.util.BitSet;
 import java.util.Iterator;
 import java.util.List;
 
+import javr.core.AVR.HaltedException;
 import javr.io.HexFile;
 import javr.memory.instruments.ReadWriteInstrument;
 import javr.util.BitList;
@@ -51,8 +52,8 @@ public class AutomatedTester {
 		CoverageAnalysis analysis = new CoverageAnalysis(firmware);
 		int i = 0;
 		while (analysis.getBranchCoverage() < target && i < iterations) {
-			//
 			BitList inputs = generator.generate();
+			//
 			if (inputs != null) {
 				// Perform the test
 				BitSet covered = fuzzTest(inputs, cycles);
@@ -76,6 +77,7 @@ public class AutomatedTester {
 	 *
 	 * @param input
 	 * @return
+	 * @throws HaltedException
 	 */
 	private BitSet fuzzTest(BitList input, int cycles) {
 		int numButtons = Button.values().length;
@@ -87,21 +89,23 @@ public class AutomatedTester {
 		tinyBoy.getAVR().getCode().register(instrument);
 		// Keep going until input is exhausted
 		int max = Math.min(cycles, input.size() / numButtons );
-		//
-		for (int i = 0; i < max; i = i + 1) {
-			int ith = i * numButtons;
-			// Read the next set of inputs
-			boolean up = input.get(ith + Button.UP.ordinal());
-			boolean right = input.get(ith + Button.RIGHT.ordinal());
-			boolean down = input.get(ith + Button.DOWN.ordinal());
-			boolean left = input.get(ith + Button.LEFT.ordinal());
-			// Apply the next set of inputs
-			tinyBoy.setButtonState(Button.UP, up);
-			tinyBoy.setButtonState(Button.DOWN, down);
-			tinyBoy.setButtonState(Button.LEFT, left);
-			tinyBoy.setButtonState(Button.RIGHT, right);
-			// Finally, clock the tiny boy
-			tinyBoy.clock();
+		try {
+			for (int i = 0; i < max; i = i + 1) {
+				int ith = i * numButtons;
+				// Read the next set of inputs
+				boolean up = input.get(ith + Button.UP.ordinal());
+				boolean right = input.get(ith + Button.RIGHT.ordinal());
+				boolean down = input.get(ith + Button.DOWN.ordinal());
+				boolean left = input.get(ith + Button.LEFT.ordinal());
+				// Apply the next set of inputs
+				tinyBoy.setButtonState(Button.UP, up);
+				tinyBoy.setButtonState(Button.DOWN, down);
+				tinyBoy.setButtonState(Button.LEFT, left);
+				tinyBoy.setButtonState(Button.RIGHT, right);
+				// Finally, clock the tiny boy
+				tinyBoy.clock();
+			}
+		} catch (HaltedException e) {
 		}
 		// Remove the instrumentation
 		tinyBoy.getAVR().getCode().unregister(instrument);

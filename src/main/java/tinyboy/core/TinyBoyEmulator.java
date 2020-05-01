@@ -1,6 +1,7 @@
 package tinyboy.core;
 
 import javr.core.AVR;
+import javr.core.AVR.HaltedException;
 import javr.core.AvrConfiguration;
 import javr.core.AvrDecoder;
 import javr.core.AvrExecutor;
@@ -119,11 +120,26 @@ public class TinyBoyEmulator {
 	}
 
 	/**
-	 * Clock the simulation once.
+	 * Clock peripherals once
 	 */
-	public void clock() {
+	public void clockPeripherals() {
 		display.clock();
 		pad.clock();
+	}
+
+	/**
+	 * Clock the simulation once.
+	 * @throws HaltedException
+	 */
+	public void clock() throws HaltedException {
+		clockPeripherals();
 		avr.clock();
+	}
+
+	/**
+	 * Close down the emulator and release any resources (e.g. windows on the screen).
+	 */
+	public void destroy() {
+
 	}
 }

@@ -187,7 +187,7 @@ public class CoverageAnalysis {
 	}
 
 	private static void disassemble(int pc, AvrInstruction[] instructions, AvrDecoder decoder, Memory memory) {
-		if(instructions[pc] != null) {
+		if(pc >= instructions.length || instructions[pc] != null) {
 			// Indicates this instruction has already been visited. Therefore, we can ignore
 			// it as we don't need to recompue the value.
 			return;

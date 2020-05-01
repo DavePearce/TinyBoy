@@ -14,6 +14,8 @@ import java.awt.event.MouseListener;
 
 import javax.swing.JPanel;
 
+import javr.core.AVR;
+import javr.core.AVR.HaltedException;
 import javr.core.AvrPeripheral;
 import javr.core.Wire;
 import javrsim.peripherals.JPeripheral;
@@ -57,7 +59,9 @@ public class TinyBoyPeripheral extends JPeripheral {
 
 	@Override
 	public void clock() {
-		tinyBoy.clock();
+		// NOTE: we don't clock the tinyboy including the AVR as this is currently
+		// clocked by the simulator.
+		tinyBoy.clockPeripherals();
 		repaint();
 	}
 
