@@ -18,6 +18,8 @@
 #define JOINT_SE 0x08
 #define JOINT_NW 0x09
 #define JOINT_SW 0x0A
+#define PILL 0x0B
+#define EATEN_PILL 0x0C
 
 uint8_t sprites[][4] = {
   {
@@ -81,9 +83,20 @@ uint8_t sprites[][4] = {
     0b0110,    
     0b1010,
     0b1100,
+    0b0000
+  },
+  { // Pill
+    0b0000,    
+    0b0110,
+    0b0110,
     0b0000    
+  },
+  { // Eaten Pill
+    0b0110,    
+    0b1011,
+    0b1101,
+    0b0110    
   }
-    
 };
 
 // =========================================================
@@ -144,6 +157,12 @@ typedef struct Snake {
 } Snake;
 
 Snake snake;
+// location of pills
+Point pills[20] = {{.x=11,.y=13}};
+// Number of pills in play
+uint8_t numberOfPills = 1;
+// Seed for location of next
+uint8_t seed;
 
 // =========================================================
 // Misc Stuff
@@ -283,6 +302,19 @@ bool isPointInSection(Point p, Point from, Section section) {
 }
 
 /**
+ * Check whether or not a given point is inside the snake
+ */
+bool isPointInSnake(Point p) {
+  for(int i=0;i!=snake.numberOfSections;i++) {
+    Section section = snake.sections[i];
+    if(isPointInSection(p,snake.head,section)) {
+      return TRUE;
+    }
+  }
+  return FALSE;
+}
+
+/**
  * Check whether or not the snake is touching itself.
  */
 bool isTouchingSelf() {
@@ -384,8 +416,22 @@ void drawSnake() {
   }  
 }
 
+void drawPills() {
+  for(int i=0;i<numberOfPills;++i) {
+    Point pt = pills[i];
+    if(i == 0) {
+      display[pt.x][pt.y] = PILL;
+    } else if(isPointInSnake(pt)) {
+      display[pt.x][pt.y] = EATEN_PILL;
+    } else {
+      numberOfPills = numberOfPills-1;
+      pills[i] = pills[numberOfPills];
+    }
+  }
+}
+
 // =========================================================
-// Move Snake
+// Snake Stuff
 // =========================================================
 
 /**
@@ -405,6 +451,56 @@ void moveSnake() {
     removeLastSection();
   }
 }
+
+int lengthOfSnake() {
+  int r = 0;
+  for(int i=0;i!=snake.numberOfSections;++i) {
+    r += snake.sections[i].length;
+  }
+  return r;
+}
+
+// =========================================================
+// Pill Stuff
+// =========================================================
+
+/**
+ * Check whether head of snake is at pill
+ */
+bool isEatingPill() {
+  return (pills[0].x == snake.head.x) && (pills[0].y == snake.head.y); 
+}
+
+/**
+ * Insert a pill to front of queue.
+ */
+void insertPill(Point pt) {
+  for(int i=1;i<=numberOfPills;++i) {
+    pills[i] = pills[i-1];
+  }
+  pills[0] = pt;
+  numberOfPills++;
+}
+
+/**
+ * Attempt to place pill in an empty location
+ */
+void placeNextPill() {
+  int gaps = 256 - lengthOfSnake();
+  int gap = seed % gaps;
+  for(int x=0;x<16;++x) {
+    for(int y=0;y<16;++y) {
+      Point p = {.x=x,.y=y};
+      if(gap == 0) {
+	insertPill(p);
+	return;
+      } else if(!isPointInSnake(p)) {
+	gap = gap - 1;
+      }
+    }
+  }
+}
+
 
 // =========================================================
 // Input
@@ -494,10 +590,16 @@ void clock(int buttons) {
   // Draw snake
   display_fill(0);
   drawSnake();
+  drawPills();
   display_refresh(sprites);
   // Check for self collision
   if(isTouchingSelf()) {
     gameOver();
+  } else if(isEatingPill()) {
+    // Length last section of snake
+    lengthenSection(lastSection());
+    // Place a new pill
+    placeNextPill();
   }
 }
 
@@ -512,6 +614,8 @@ int main() {
       for(int j=0;j<100;++j) {      
 	// record any buttons pressed between frames
 	buttons |= read_buttons();
+	// Increment seed
+	seed = seed + 1;
       }
     }
     // refresh
