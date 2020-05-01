@@ -1,5 +1,7 @@
 package tinyboy.core;
 
+import java.util.Arrays;
+
 import javr.core.AvrPeripheral;
 import javr.core.Wire;
 import javr.util.IdealWire;
@@ -30,6 +32,10 @@ public class ControlPad implements AvrPeripheral {
 	public Wire[] getWires() {
 		return wires;
 	}
+
+	private static long count = -1;
+
+	private boolean[] state = new boolean[4];
 
 	@Override
 	public void clock() {

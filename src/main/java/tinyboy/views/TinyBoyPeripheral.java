@@ -213,7 +213,7 @@ public class TinyBoyPeripheral extends JPeripheral {
 		@Override
 		public void keyPressed(KeyEvent e) {
 			ControlPad.Button b = determineButton(e);
-			if(b != null) {
+			if(b != null && !tinyBoy.getButtonState(b)) {
 				tinyBoy.setButtonState(b, true);
 			}
 

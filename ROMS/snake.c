@@ -319,11 +319,9 @@ void newSection(Direction direction) {
 /**
  *  Check whether any buttons are pressed which signals a change of direction.
  */
-void updateDirection() {
+void updateDirection(int buttons) {
   Direction oDirection = getCurrentDirection();
   Direction nDirection;
-  //
-  int buttons = read_buttons();
   //  
   if (buttons & BUTTON_LEFT) {
     nDirection = WEST;
@@ -350,7 +348,8 @@ void updateDirection() {
 
 void setup() {
   // set SCLK, MOSI, MISO, SS to be output
-  DDRB = 0b00001111;
+  DDRB = SCK | MOSI;  
+  //DDRB = 0b00001111;
   PORTB = 0b00000000;
 }
 
@@ -373,25 +372,39 @@ void gameOver() {
   _delay_ms(1000);
 }
 
+/**
+ * Clock another cycle of the game.
+ */
+void clock(int buttons) {
+  // Time for the next frame!
+  // Check for change of direction
+  updateDirection(buttons);
+  // Move snake in current direction
+  moveSnake();        
+  // Draw snake
+  display_fill(0);
+  drawSnake();
+  display_refresh(sprites);
+  // Check for self collision
+  if(isTouchingSelf()) {
+    gameOver();
+  }
+}
+
 void main() {
   setup();
   resetGame();
   //
   while(1) {
-    // Time for the next frame!
-    // Check for change of direction
-    updateDirection();
-    // Move snake in current direction
-    moveSnake();        
-    // Draw snake
-    display_fill(0);
-    drawSnake();
-    display_refresh(sprites);
-    // Check for self collision
-    if(isTouchingSelf()) {
-      gameOver();
+    int buttons = 0;
+    // delay loop
+    for(int i=0;i<1000;++i) {
+      for(int j=0;j<100;++j) {      
+	// record any buttons pressed between frames
+	buttons |= read_buttons();
+      }
     }
-    //
-    _delay_ms(100);
+    // refresh
+    clock(buttons);
   }
 }

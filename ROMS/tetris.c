@@ -195,68 +195,81 @@ void setup() {
   PORTB = 0b00000000;
 }
 
-int main (void){
-  // Configure
-  setup();
-  display_fill(0);
-  //
-  while(1) {
-    switch(state) {
-    case RESTART: 
-      display_fill(0);
-      state = LANDED;
-      break;
-    case LANDED:
-      //check_lines();
-      initialise_piece(piece,piece_num);
-      piece_num = piece_num + 1;
-      if(piece_num >= 6) {
+void clock (int buttons){
+  switch(state) {
+  case RESTART: 
+    display_fill(0);
+    state = LANDED;
+    break;
+  case LANDED:
+    //check_lines();
+    initialise_piece(piece,piece_num);
+    piece_num = piece_num + 1;
+    if(piece_num >= 6) {
 	piece_num = 0;
-      }
-      sprite = sprite + 1;
-      if(sprite > 4) {
-	sprite = 1;
-      }
-      state = PLAYING;
-      x = 3;
-      y = -2;
-      break;
-    case PLAYING:
-      // First, take piece off board
-      draw_at(x,y,piece,EMPTY);
-      // Now, apply user actions
-      int buttons = read_buttons();
-      if(buttons & BUTTON_UP) {
-	rotate(piece);
-      } else if(buttons & BUTTON_DOWN) {
-	while(next_state(piece,x,y) != LANDED) {
-	  y = y + 1;
-	}
-      } else if((buttons & BUTTON_LEFT)) {
-	if(next_state(piece,x-1,y) == PLAYING) {
-	  x = x - 1;
-	}
-      } else if(buttons & BUTTON_RIGHT) {
-	if(next_state(piece,x+1,y) == PLAYING) {
-	  x = x + 1;
-	}
-      }
-      // Update the game state
-      state = next_state(piece,x,y);
-      // Now, apply gravity (if possible)
-      if(state == PLAYING) {
-	// Gravity applies!
+    }
+    sprite = sprite + 1;
+    if(sprite > 4) {
+      sprite = 1;
+    }
+    state = PLAYING;
+    x = 3;
+    y = -2;
+    break;
+  case PLAYING:
+    // First, take piece off board
+    draw_at(x,y,piece,EMPTY);
+    // Now, apply user actions
+    if(buttons & BUTTON_UP) {
+      rotate(piece);
+    }
+    if(buttons & BUTTON_DOWN) {
+      while(next_state(piece,x,y) != LANDED) {
 	y = y + 1;
       }
-      // Third put piece on board in 
-      // new position
-      draw_at(x,y,piece,sprite);
-      // Refresh display
-      display_refresh(sprites);
-      _delay_ms(100);      
-      break;
-    }      
-  }
+    }
+    if((buttons & BUTTON_LEFT)) {
+      if(next_state(piece,x-1,y) == PLAYING) {
+	x = x - 1;
+      }
+    }
+    if(buttons & BUTTON_RIGHT) {
+      if(next_state(piece,x+1,y) == PLAYING) {
+	x = x + 1;
+      }
+    }
+    // Update the game state
+    state = next_state(piece,x,y);
+    // Now, apply gravity (if possible)
+    if(state == PLAYING) {
+      // Gravity applies!
+      y = y + 1;
+    }
+    // Third put piece on board in 
+    // new position
+    draw_at(x,y,piece,sprite);
+    // Refresh display
+    display_refresh(sprites);
+    break;
+  }      
+}
+
+int main() {
+  setup();
+  display_fill(0);  
   //
-  return 0;
+  while(1) {
+    int buttons = 0;
+    // delay loop
+    for(int i=0;i<1000;++i) {
+      for(int j=0;j<100;++j) {      
+	// record any buttons pressed between frames
+	buttons |= read_buttons();
+      }
+    }
+    // refresh
+    clock(buttons);
+  }
+
+  return 1;
 }
