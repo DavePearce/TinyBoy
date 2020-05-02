@@ -351,14 +351,14 @@ void drawSnakeBody(Point from, Point to) {
   // Update the display
   for (int i = 0; i < count; i = i + 1) {
     from = movePoint(dir,from);    
-    display[from.x][from.y] = BODY_NS + (dir/2);
+    display_draw(from.x,from.y,BODY_NS + (dir/2));
   }  
 }
 
 Point drawSnakeHead(Point from, Section s1) {
   Point to = getEndPoint(from,s1);
   drawSnakeBody(from,to);  
-  display[from.x][from.y] = (HEAD_N + s1.direction);
+  display_draw(from.x,from.y,HEAD_N + s1.direction);
   return to;
 }
 
@@ -393,7 +393,7 @@ void drawSnakeJoint(Point pt, Direction from, Direction to) {
     break;
   }
   // Done
-  display[pt.x][pt.y] = (JOINT_NE + idx);
+  display_draw(pt.x,pt.y,JOINT_NE + idx);
 }
 
 Point drawSnakeSection(Point from, Section s0, Section s1) {
@@ -420,9 +420,9 @@ void drawPills() {
   for(int i=0;i<numberOfPills;++i) {
     Point pt = pills[i];
     if(i == 0) {
-      display[pt.x][pt.y] = PILL;
+      display_draw(pt.x,pt.y,PILL);
     } else if(isPointInSnake(pt)) {
-      display[pt.x][pt.y] = EATEN_PILL;
+      display_draw(pt.x,pt.y,EATEN_PILL);
     } else {
       numberOfPills = numberOfPills-1;
       pills[i] = pills[numberOfPills];

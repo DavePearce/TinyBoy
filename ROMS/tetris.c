@@ -8,47 +8,37 @@
 #define COLLIDED 3
 
 #define EMPTY 0x00
+#define ARENA_HEIGHT 16
+#define ARENA_WIDTH 13
 
 // =======================================
 // Sprites
 // =======================================
 
-int sprites[5][8] = {
+uint8_t sprites[5][4] = {
   {
-    0,0,0,0,0,0,0,0 // all off
+    0,0,0,0 // all off
   },
   {
-    0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff // all on
+    0xff,0xff,0xff,0xff // all on
   },
   {
-    0b11111111,
-    0b10000001,
-    0b10000001,
-    0b10000001,
-    0b10000001,
-    0b10000001,
-    0b10000001,
-    0b11111111
+    0b1111,
+    0b1010,
+    0b1101,
+    0b1010,
   },
   {
-    0b11111111,
-    0b10100101,
-    0b10010011,
-    0b11001001,
-    0b10100101,
-    0b10010011,
-    0b11001001,
-    0b11111111
+    0b1111,
+    0b1010,
+    0b1100,
+    0b1001,
   },  
   {
-    0b11111111,
-    0b10101011,
-    0b11010101,
-    0b10101011,
-    0b11010101,
-    0b10101011,
-    0b11010101,
-    0b11111111
+    0b1111,
+    0b1000,
+    0b1111,
+    0b1000
   }
 };
 
@@ -63,7 +53,7 @@ const int O_PIECE = 3;
 const int S_PIECE = 4;
 const int Z_PIECE = 5;
 
-int piece_array[6][16] = {
+uint8_t piece_array[6][16] = {
   /* I Piece */
   {
    0,0,0,0,  
@@ -141,13 +131,13 @@ int next_state(int data[], int x, int y) {
          // need to clip
          if(data[(i*4)+j] == 1) {   
             if(y == 1) { is_full = 1; }              
-            if(y == 8) { 
+            if(y == ARENA_HEIGHT) { 
               // In this case, have reached ground
                return LANDED; 
-            } else if(x < 0 || x >= 8) { 
+            } else if(x < 0 || x >= ARENA_WIDTH) { 
               // In this case, have collided with wall
                return COLLIDED; 
-            } else if(y >= 0 && y < 8 && display_read(x,y) != EMPTY) {   
+            } else if(y >= 0 && y < ARENA_HEIGHT && display_read(x,y) != EMPTY) {   
               // In this case, have touched existing piece
               return LANDED + is_full;               
             }
@@ -169,7 +159,7 @@ void draw_at(int x, int y, int data[], int color) {
      x = sx;
      for(int j=0;j!=4;++j) {
          // need to clip
-         if(x >= 0 && x < 8 && y >= 0 && y < 8) {       
+         if(x >= 0 && x < ARENA_WIDTH && y >= 0 && y < ARENA_HEIGHT) {       
            if(data[(i*4)+j] == 1) {
 	     display_draw(x,y,color);
            } 

@@ -7,6 +7,7 @@ import java.util.BitSet;
 import java.util.Iterator;
 import java.util.List;
 
+import javr.core.AVR;
 import javr.core.AVR.HaltedException;
 import javr.io.HexFile;
 import javr.memory.instruments.ReadWriteInstrument;
@@ -56,11 +57,13 @@ public class AutomatedTester {
 			//
 			if (inputs != null) {
 				// Perform the test
-				BitSet covered = fuzzTest(inputs, cycles);
+				Result r = fuzzTest(inputs, cycles);
+				BitSet covered = r.getCoverage();
+				// Insure only instructions returned.
 				covered.and(analysis.getReachableInstructions());
 				// Register the output with the generator so that it can refine its strategy
 				// based on this.
-				generator.record(inputs, covered);
+				generator.record(inputs, r.getCoverage(), r.getState());
 				// Record the output with the coverage analysis so that we can subsequently
 				// compute coverage data.
 				analysis.record(covered);
@@ -79,7 +82,7 @@ public class AutomatedTester {
 	 * @return
 	 * @throws HaltedException
 	 */
-	private BitSet fuzzTest(BitList input, int cycles) {
+	private Result fuzzTest(BitList input, int cycles) {
 		int numButtons = Button.values().length;
 		// Reset the tiny boy
 		tinyBoy.reset();
@@ -109,8 +112,23 @@ public class AutomatedTester {
 		}
 		// Remove the instrumentation
 		tinyBoy.getAVR().getCode().unregister(instrument);
+		byte[] data = toByteArray(tinyBoy.getAVR().getData());
 		// Extract the coverage data
-		return instrument.getReads();
+		return new Result(instrument.getReads(),data);
+	}
+
+	/**
+	 * Read the contents of memory into a byte array.
+	 *
+	 * @param memory
+	 * @return
+	 */
+	private byte[] toByteArray(AVR.Memory memory) {
+		byte[] bytes = new byte[memory.size()];
+		for(int i=0;i!=bytes.length;++i) {
+			bytes[i] = memory.peek(i);
+		}
+		return bytes;
 	}
 
 	/**
@@ -146,11 +164,41 @@ public class AutomatedTester {
 
 		/**
 		 * Record the result of a given test. That is, for a generated input, record the
-		 * actual output.
+		 * actual set of covered instructions along with the final state.
 		 *
 		 * @param input
 		 * @param output
 		 */
-		public void record(T input, BitSet output);
+		public void record(T input, BitSet output, byte[] state);
+	}
+
+	/**
+	 * Represents the result from a fuzzing run.
+	 *
+	 * @author djp
+	 *
+	 */
+	public class Result {
+		/**
+		 * Instructions covered by this run.
+		 */
+		private final BitSet coverage;
+		/**
+		 * State of machine memory at end of run.
+		 */
+		private final byte[] state;
+
+		public Result(BitSet coverage, byte[] state) {
+			this.coverage = coverage;
+			this.state = state;
+		}
+
+		public BitSet getCoverage() {
+			return coverage;
+		}
+
+		public byte[] getState() {
+			return state;
+		}
 	}
 }
