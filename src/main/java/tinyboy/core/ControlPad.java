@@ -21,7 +21,7 @@ public class ControlPad implements AvrPeripheral {
 	private final Wire[] wires;
 
 	public ControlPad(Wire up, Wire down, Wire left, Wire right) {
-		this.wires = new IdealWire[4];
+		this.wires = new Wire[4];
 		this.wires[Button.UP.ordinal()] = up;
 		this.wires[Button.DOWN.ordinal()] = down;
 		this.wires[Button.LEFT.ordinal()] = left;

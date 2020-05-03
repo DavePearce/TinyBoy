@@ -1,6 +1,7 @@
 package tinyboy.core;
 
 import java.util.Arrays;
+import java.util.function.Supplier;
 
 import javr.util.BitList;
 
@@ -14,7 +15,7 @@ import javr.util.BitList;
  * @author David J. Pearce
  *
  */
-public class TinyBoyInputSequence implements BitList {
+public class TinyBoyInputSequence implements Supplier<Boolean> {
 	/**
 	 * The number of inputs is determined by the number of buttons on the control
 	 * pad.
@@ -24,23 +25,14 @@ public class TinyBoyInputSequence implements BitList {
 	 * The sequence of button push pulses.
 	 */
 	private final ControlPad.Button[] pulses;
-	/**
-	 * The width of a single pulse.
-	 */
-	private final int width;
 
 	/**
-	 * Create a new input sequence with a give number of pulses (i.e. button pushes)
-	 * where each pulse has a given width (in cycles).
-	 *
-	 * @param size
-	 *            The number of pulses in this sequence.
-	 * @param width
-	 *            The width of a pulse in this sequence.
+	 * Clock determines where we are in the pulse sequence.
 	 */
-	public TinyBoyInputSequence(int size, int width) {
-		this.pulses = new ControlPad.Button[size];
-		this.width = width;
+	private int clock = 0;
+
+	public TinyBoyInputSequence(ControlPad.Button... pulses) {
+		this.pulses = pulses;
 	}
 
 	/**
@@ -49,18 +41,7 @@ public class TinyBoyInputSequence implements BitList {
 	 * @param list
 	 */
 	public TinyBoyInputSequence(TinyBoyInputSequence list) {
-		this.width = list.width;
 		this.pulses = Arrays.copyOf(list.pulses, list.pulses.length);
-	}
-
-	private TinyBoyInputSequence(int width, ControlPad.Button[] pulses) {
-		this.width = width;
-		this.pulses = pulses;
-	}
-
-	@Override
-	public int size() {
-		return (pulses.length * width) * NUM_INPUTS;
 	}
 
 	/**
@@ -71,30 +52,24 @@ public class TinyBoyInputSequence implements BitList {
 		return pulses.length;
 	}
 
-	@Override
-	public boolean get(int ith) {
-		int index = ith / (NUM_INPUTS * width);
-		int input = ith % NUM_INPUTS;
-		ControlPad.Button pulse = pulses[index];
-		boolean r = pulse != null && pulse.ordinal() == input;
-		return r;
-	}
-
-	@Override
-	public void set(int ith, boolean value) {
-		// Not supported!
-		throw new UnsupportedOperationException();
-	}
-
 	/**
-	 * Set a specific pulse to be either a button push, or no button pushed
-	 * (<code>null</code>).
-	 *
-	 * @param pulse
-	 * @param button
+	 * Get next input in sequence.
 	 */
-	public void setPulse(int pulse, ControlPad.Button button) {
-		pulses[pulse] = button;
+	@Override
+	public Boolean get() {
+		int n = clock / NUM_INPUTS;
+		int m = clock % NUM_INPUTS;
+		// Increment clock
+		clock = clock + 1;
+		// Sanity check whether finished
+		if(n >= pulses.length) {
+			return false;
+		} else {
+			// Extract pulse
+			ControlPad.Button b = pulses[n];
+			// Determine whether high or low
+			return (b != null) && (m == b.ordinal());
+		}
 	}
 
 	/**
@@ -105,7 +80,7 @@ public class TinyBoyInputSequence implements BitList {
 	 */
 	public TinyBoyInputSequence append(ControlPad.Button pulse) {
 		final int len = pulses.length;
-		TinyBoyInputSequence s = new TinyBoyInputSequence(width, Arrays.copyOf(pulses, len + 1));
+		TinyBoyInputSequence s = new TinyBoyInputSequence(Arrays.copyOf(pulses, len + 1));
 		s.pulses[len] = pulse;
 		return s;
 	}
@@ -119,25 +94,12 @@ public class TinyBoyInputSequence implements BitList {
 	public TinyBoyInputSequence append(ControlPad.Button[] nPulses) {
 		final int n = pulses.length;
 		final int m = nPulses.length;
-		// Create sequence of appropriate length.
-		TinyBoyInputSequence s = new TinyBoyInputSequence(n + m, width);
+		ControlPad.Button[] tmp = new ControlPad.Button[n+m];
 		// Copy pulses over
-		System.arraycopy(pulses, 0, s.pulses, 0, n);
-		System.arraycopy(nPulses, 0, s.pulses, n, nPulses.length);
-		// Done
-		return s;
-	}
-
-	public String toBitString() {
-		String r = "";
-		for (int i = 0; i < size(); ++i) {
-			if(get(i)) {
-				r += "1";
-			} else {
-				r += "0";
-			}
-		}
-		return r;
+		System.arraycopy(pulses, 0, tmp, 0, n);
+		System.arraycopy(nPulses, 0, tmp, n, nPulses.length);
+		// Create sequence of appropriate length.
+		return new TinyBoyInputSequence(tmp);
 	}
 
 

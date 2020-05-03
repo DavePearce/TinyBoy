@@ -1,5 +1,7 @@
 package tinyboy.core;
 
+import java.util.function.Function;
+
 import javr.core.AVR;
 import javr.core.AVR.HaltedException;
 import javr.core.AvrConfiguration;
@@ -40,8 +42,12 @@ public class TinyBoyEmulator {
 	private final ControlPad pad;
 
 	public TinyBoyEmulator() {
+		this(labels -> new IdealWire(labels));
+	}
+
+	public TinyBoyEmulator(Function<String[],Wire> factory) {
 		// Construct the micro-controller
-		this.avr = AvrConfiguration.instantiate("ATtiny85");
+		this.avr = AvrConfiguration.instantiate("ATtiny85",factory);
 		// NOTE: we connect the display MISO and SS to LOW as they are not needed in
 		// this design, thereby freeing up pins for the button pad.
 		this.display = new DotMatrixDisplay(80, 48,
