@@ -1,8 +1,10 @@
 package tinyboy.core;
 
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.function.Supplier;
 
+import javr.core.AVR;
 import javr.util.BitList;
 
 /**
@@ -15,7 +17,7 @@ import javr.util.BitList;
  * @author David J. Pearce
  *
  */
-public class TinyBoyInputSequence implements Supplier<Boolean> {
+public class TinyBoyInputSequence implements Iterator<Boolean> {
 	/**
 	 * The number of inputs is determined by the number of buttons on the control
 	 * pad.
@@ -52,11 +54,19 @@ public class TinyBoyInputSequence implements Supplier<Boolean> {
 		return pulses.length;
 	}
 
+	@Override
+	public boolean hasNext() {
+		int n = clock / NUM_INPUTS;
+		// NOTE: following is a little trick which basically allows the TinyBoy to
+		// continue executing upto and including the next time the buttons are read.
+		return n <= pulses.length;
+	}
+
 	/**
 	 * Get next input in sequence.
 	 */
 	@Override
-	public Boolean get() {
+	public Boolean next() {
 		int n = clock / NUM_INPUTS;
 		int m = clock % NUM_INPUTS;
 		// Increment clock

@@ -29,13 +29,13 @@ import tinyboy.core.TinyBoyEmulator;
  * @author David J. Pearce
  *
  */
-public class AutomatedTester<T extends Supplier<Boolean>> {
+public class AutomatedTester<T extends Iterator<Boolean>> {
 	private final ExtendedTinyBoyEmulator tinyBoy;
 	private final HexFile firmware;
 	private final InputGenerator<T> generator;
 
-	public AutomatedTester(HexFile firmware, InputGenerator<T> generator) {
-		this.tinyBoy = createTinyBoy();
+	public AutomatedTester(HexFile firmware, InputGenerator<T> generator, boolean gui) {
+		this.tinyBoy = createTinyBoy(gui);
 		this.firmware = firmware;
 		this.generator = generator;
 	}
@@ -83,6 +83,7 @@ public class AutomatedTester<T extends Supplier<Boolean>> {
 			}
 			i = i + 1;
 		}
+		System.out.println("Processed: " + i + " inputs");
 		return analysis;
 	}
 
@@ -93,8 +94,7 @@ public class AutomatedTester<T extends Supplier<Boolean>> {
 	 * @return
 	 * @throws HaltedException
 	 */
-	private Result fuzzTest(Supplier<Boolean> input, int cycles) {
-		int numButtons = Button.values().length;
+	private Result fuzzTest(Iterator<Boolean> input, int cycles) {
 		// Reset the tiny boy
 		tinyBoy.reset();
 		tinyBoy.upload(firmware);
@@ -103,22 +103,10 @@ public class AutomatedTester<T extends Supplier<Boolean>> {
 		ReadWriteInstrument instrument = new ReadWriteInstrument();
 		tinyBoy.getAVR().getCode().register(instrument);
 		// Keep going until input is exhausted
-		//int max = Math.min(cycles, input.size() / numButtons );
 		try {
-			for (int i = 0; i < cycles; i = i + 1) {
-//				int ith = i * numButtons;
-//				// Read the next set of inputs
-//				boolean up = input.get(ith + Button.UP.ordinal());
-//				boolean right = input.get(ith + Button.RIGHT.ordinal());
-//				boolean down = input.get(ith + Button.DOWN.ordinal());
-//				boolean left = input.get(ith + Button.LEFT.ordinal());
-//				// Apply the next set of inputs
-//				tinyBoy.setButtonState(Button.UP, up);
-//				tinyBoy.setButtonState(Button.DOWN, down);
-//				tinyBoy.setButtonState(Button.LEFT, left);
-//				tinyBoy.setButtonState(Button.RIGHT, right);
-				// Finally, clock the tiny boy
+			while(input.hasNext() && cycles > 0) {
 				tinyBoy.clock();
+				cycles = cycles - 1;
 			}
 		} catch (HaltedException e) {
 		}
@@ -134,44 +122,57 @@ public class AutomatedTester<T extends Supplier<Boolean>> {
 	 *
 	 * @return
 	 */
-	private ExtendedTinyBoyEmulator createTinyBoy() {
+	private ExtendedTinyBoyEmulator createTinyBoy(boolean gui) {
 		SymbolicPullWire[] wires = new SymbolicPullWire[4];
 		wires[ControlPad.Button.UP.ordinal()] = new SymbolicPullWire("PB1", "MISO", "DO", "AIN1", "OC0B", "OC1A", "PCINT1");
 		wires[ControlPad.Button.DOWN.ordinal()] = new SymbolicPullWire("PB3", "PCINT3", "XTAL1", "CLK1", "!OC1B", "ADC3");
 		wires[ControlPad.Button.LEFT.ordinal()] = new SymbolicPullWire("PB4", "PCINT4", "XTAL2", "CLK0", "OC1B", "ADC2");
 		wires[ControlPad.Button.RIGHT.ordinal()] = new SymbolicPullWire("PB5", "PCINT5", "!RESET", "ADC0", "dW");
+		if(!gui) {
+			return new ExtendedTinyBoyEmulator(wires);
+		} else {
+			return new ExtendedTinyBoyEmulator(wires) {
+				private final JPeripheral view = new TinyBoyPeripheral(this);
 
-		return new ExtendedTinyBoyEmulator(wires);
+				@Override
+				public void clock() throws HaltedException {
+					final AVR mcu = this.getAVR();
+					// Clock peripheral first
+					view.clock();
+					// Clock AVR second
+					mcu.clock();
+				}
+
+				@Override
+				public void destroy() {
+					view.setVisible(false);
+					view.dispose();
+				}
+
+				@Override
+				public boolean getButtonState(ControlPad.Button button) {
+					// NOTE: this override is necessary to prevent the GUI from generating read
+					// requests on the I/O pins representing the buttons which, in turn, interfer
+					// with our input streams.
+					return false;
+				}
+			};
+		}
 	}
 
 	private static class ExtendedTinyBoyEmulator extends TinyBoyEmulator {
 		private final SymbolicPullWire[] wires;
-		private final JPeripheral view = new TinyBoyPeripheral(this);
+
 
 		public ExtendedTinyBoyEmulator(SymbolicPullWire[] wires) {
 			super(labels -> getWire(wires,labels));
 			this.wires = wires;
 		}
 
-		public void bind(Supplier<Boolean> input) {
+		public void bind(Iterator<Boolean> input) {
 			for(int i=0;i!=wires.length;++i) {
 				wires[i].bind(input);
 			}
-		}
-
-		@Override
-		public void clock() throws HaltedException {
-			final AVR mcu = this.getAVR();
-			// Clock peripheral first
-			view.clock();
-			// Clock AVR second
-			mcu.clock();
-		}
-
-		@Override
-		public void destroy() {
-			view.setVisible(false);
-			view.dispose();
 		}
 
 		private static Wire getWire(SymbolicPullWire[] wires, String[] labels) {
@@ -188,28 +189,32 @@ public class AutomatedTester<T extends Supplier<Boolean>> {
 				return new IdealWire(labels);
 			}
 		}
-
-		@Override
-		public boolean getButtonState(ControlPad.Button button) {
-			// NOTE: this override is necessary to prevent the GUI from generating read
-			// requests on the I/O pins representing the buttons which, in turn, interfer
-			// with our input streams.
-			return false;
-		}
 	}
 
 
 	private static class SymbolicPullWire implements Wire {
 		private final String[] labels;
-		private Supplier<Boolean> input;
+		private Iterator<Boolean> input;
 
 		public SymbolicPullWire(String... labels) {
 			this.labels = labels;
 			// Default input
-			this.input = () -> false;
+			this.input = new Iterator<Boolean>() {
+
+				@Override
+				public boolean hasNext() {
+					return false;
+				}
+
+				@Override
+				public Boolean next() {
+					return false;
+				}
+
+			};
 		}
 
-		public void bind(Supplier<Boolean> input) {
+		public void bind(Iterator<Boolean> input) {
 			this.input = input;
 		}
 		@Override
@@ -229,7 +234,7 @@ public class AutomatedTester<T extends Supplier<Boolean>> {
 
 		@Override
 		public boolean read() {
-			return input.get();
+			return input.next();
 		}
 
 		@Override
@@ -292,7 +297,7 @@ public class AutomatedTester<T extends Supplier<Boolean>> {
 	 * @author David J. Pearce
 	 *
 	 */
-	public interface InputGenerator<T extends Supplier<Boolean>> {
+	public interface InputGenerator<T extends Iterator<Boolean>> {
 		/**
 		 * Get the next generated input.
 		 *
