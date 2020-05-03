@@ -94,6 +94,30 @@ void display_fill(uint8_t c) {
 }
 
 /**
+ * Write out a single line to a given using a split point to switch sprites on.
+ */
+void display_refresh_split_line(int sx, int y, uint8_t sprites_a[][4], uint8_t sprites_b[][4]) {
+  for(int sy=0;sy<4;++sy) {
+    for(int x=0;x<sx;x+=2) {
+      uint8_t c1 = display_read(x,y);
+      uint8_t c2 = display_read(x+1,y);
+      uint8_t *sl = sprites_a[c1];
+      uint8_t *sr = sprites_a[c2];
+      int data = sr[sy] | (sl[sy] << 4);
+      display_write(data);
+    }
+    for(int x=sx;x<DISPLAY_WIDTH;x+=2) {
+      uint8_t c1 = display_read(x,y);
+      uint8_t c2 = display_read(x+1,y);
+      uint8_t *sl = sprites_b[c1];
+      uint8_t *sr = sprites_b[c2];
+      int data = sr[sy] | (sl[sy] << 4);
+      display_write(data);
+    }    
+  }
+}
+
+/**
  * Write out display contents to device, using a given set of sprites
  * and starting from a given Y position.  This allows one to use
  * different sprite sets for different lines.
