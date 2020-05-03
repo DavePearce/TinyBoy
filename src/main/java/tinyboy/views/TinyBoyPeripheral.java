@@ -30,12 +30,16 @@ import tinyboy.core.TinyBoyEmulator;
  *
  */
 public class TinyBoyPeripheral extends JPeripheral {
+	private static final int SCREEN_WIDTH = TinyBoyEmulator.DISPLAY_WIDTH * 4;
+	private static final int SCREEN_HEIGHT = TinyBoyEmulator.DISPLAY_HEIGHT * 4;
+	private static final Color LIGHT_GREEN = Color.decode("0xd9ffb3");
+	//
 	private final TinyBoyEmulator tinyBoy;
 
 	public TinyBoyPeripheral(TinyBoyEmulator tinyBoy) {
 		super("TinyBoy");
 		this.tinyBoy = tinyBoy;
-		DisplayPanel dc = new DisplayPanel(256, 256);
+		DisplayPanel dc = new DisplayPanel(SCREEN_WIDTH, SCREEN_HEIGHT);
 		ButtonPanel bp  = new ButtonPanel(256,100);
 		// Add panels
 		add(dc,BorderLayout.CENTER);
@@ -45,8 +49,8 @@ public class TinyBoyPeripheral extends JPeripheral {
 		bp.requestFocus();
 		//
 		//
-		setBounds(0, 0, 300, 422);
-		setPreferredSize(new Dimension(300,422));
+		//setBounds(0, 0, 300, 422);
+		//setPreferredSize(new Dimension(300,422));
 		setResizable(false);
 		pack();
 		setVisible(true);
@@ -112,7 +116,7 @@ public class TinyBoyPeripheral extends JPeripheral {
 					if (pixel) {
 						g.setColor(Color.BLACK);
 					} else {
-						g.setColor(Color.WHITE);
+						g.setColor(LIGHT_GREEN);
 					}
 					g.fillRect(x * pw, y * ph, pw, ph);
 				}

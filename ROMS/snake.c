@@ -3,6 +3,13 @@
 #include <math.h>
 #include "tinyboy.h"
 
+#define ARENA_MIN_X 1
+#define ARENA_MAX_X (DISPLAY_WIDTH-2)
+#define ARENA_MIN_Y 3
+#define ARENA_MAX_Y (DISPLAY_HEIGHT-2)
+#define ARENA_WIDTH (ARENA_MAX_X - ARENA_MIN_X + 1)
+#define ARENA_HEIGHT (ARENA_MAX_Y - ARENA_MIN_Y + 1)
+
 // =======================================
 // Sprites
 // =======================================
@@ -20,8 +27,11 @@
 #define JOINT_SW 0x0A
 #define PILL 0x0B
 #define EATEN_PILL 0x0C
+#define BORDER_LR 0x0D
+#define BORDER_TB 0x0E
+#define BORDER_CNR 0x0F
 
-uint8_t sprites[][4] = {
+uint8_t arena_sprites[][4] = {
   {
     0,0,0,0 // all off
   },
@@ -86,9 +96,9 @@ uint8_t sprites[][4] = {
     0b0000
   },
   { // Pill
-    0b0000,    
-    0b0110,
-    0b0110,
+    0b0010,    
+    0b0101,
+    0b0010,
     0b0000    
   },
   { // Eaten Pill
@@ -96,7 +106,237 @@ uint8_t sprites[][4] = {
     0b1011,
     0b1101,
     0b0110    
+  },
+  { // Horizontal Border
+   0b0000,
+   0b1111,
+   0b1111,
+   0b0000,
+  },
+  { // Vertical Border
+   0b0110,
+   0b0110,
+   0b0110,
+   0b0110,
+  },
+  { // Corner Border
+   0b1111,
+   0b1111,
+   0b1111,
+   0b1111,
   }
+};
+
+uint8_t digit_sprites_top[][4] = {
+  {
+    0,0,0,0 // all off
+  },				  
+ { // zero
+   0b0100,
+   0b1010,
+   0b1010,
+   0b1010,
+   /* 0b1111, */
+   /* 0b0000, */
+   /* 0b0000, */
+   /* 0b0000,    */
+ },
+ { // one
+   0b0100,
+   0b1100,
+   0b0100,
+   0b0100,
+   /* 0b1111, */
+   /* 0b0000, */
+   /* 0b0000, */
+   /* 0b0000,    */
+ },
+ { // two
+   0b1100,
+   0b0010,
+   0b0100,
+   0b1000,
+   /* 0b1111, */
+   /* 0b0000, */
+   /* 0b0000, */
+   /* 0b0000,    */
+ },
+ { // three
+   0b1100,
+   0b0010,
+   0b0110,
+   0b0010,
+   /* 0b0110, */
+   /* 0b0000, */
+   /* 0b0000, */
+   /* 0b0000,    */
+ },
+ { // four
+   0b1000,
+   0b1000,
+   0b1010,
+   0b1110,
+   /* 0b0010, */
+   /* 0b0000, */
+   /* 0b0000, */
+   /* 0b0000,    */
+ },
+ { // five
+   0b1110,
+   0b1000,
+   0b1110,
+   0b0010,
+   /* 0b1110, */
+   /* 0b0000, */
+   /* 0b0000, */
+   /* 0b0000,    */
+ },
+ { // six
+   0b1110,
+   0b1000,
+   0b1110,
+   0b1010,
+   /* 0b1110, */
+   /* 0b0000, */
+   /* 0b0000, */
+   /* 0b0000,    */
+ },
+ { // seven
+   0b1110,
+   0b0010,
+   0b0100,
+   0b0100,
+   /* 0b0100, */
+   /* 0b0000, */
+   /* 0b0000, */
+   /* 0b0000,    */
+ },
+ { // eight
+   0b1110,
+   0b1010,
+   0b1110,
+   0b1010,
+   /* 0b0110, */
+   /* 0b0000, */
+   /* 0b0000, */
+   /* 0b0000,    */
+ },
+ { // nine
+   0b1110,
+   0b1010,
+   0b1110,
+   0b0010,
+   /* 0b0110, */
+   /* 0b0000, */
+   /* 0b0000, */
+   /* 0b0000,    */
+ }
+};
+
+uint8_t digit_sprites_bottom[][4] = {
+  {
+    0,0,0,0 // all off
+  },
+  { // zero
+   /* 0b0110, */
+   /* 0b1001, */
+   /* 0b1001, */
+   /* 0b1001, */
+   0b0100,
+   0b0000,
+   0b0000,
+   0b0000,   
+ },
+ { // one
+   /* 0b0110, */
+   /* 0b1110, */
+   /* 0b0110, */
+   /* 0b0110, */
+   0b1110,
+   0b0000,
+   0b0000,
+   0b0000,   
+ },
+ { // two
+   /* 0b0110, */
+   /* 0b1001, */
+   /* 0b0010, */
+   /* 0b0100, */
+   0b1110,
+   0b0000,
+   0b0000,
+   0b0000,   
+ },
+ { // three
+   /* 0b0110, */
+   /* 0b1001, */
+   /* 0b0011, */
+   /* 0b1001, */
+   0b1100,
+   0b0000,
+   0b0000,
+   0b0000,   
+ },
+ { // four
+   /* 0b1000, */
+   /* 0b1000, */
+   /* 0b1010, */
+   /* 0b1111, */
+   0b0010,
+   0b0000,
+   0b0000,
+   0b0000,   
+ },
+ { // five
+   /* 0b1111, */
+   /* 0b1000, */
+   /* 0b1110, */
+   /* 0b0001, */
+   0b1110,
+   0b0000,
+   0b0000,
+   0b0000,   
+ },
+ { // six
+ /*   0b0110, */
+ /*   0b1000, */
+ /*   0b1110, */
+ /*   0b1001, */
+   0b1110,
+   0b0000,
+   0b0000,
+   0b0000,
+ },
+ { // seven
+ /*   0b1111, */
+ /*   0b0001, */
+ /*   0b0010, */
+ /*   0b0100, */
+   0b0100,
+   0b0000,
+   0b0000,
+   0b0000,   
+ },
+ { // eight
+   /* 0b0110, */
+   /* 0b1001, */
+   /* 0b0110, */
+   /* 0b1001, */
+   0b1110,
+   0b0000,
+   0b0000,
+   0b0000,   
+ },
+ { // nine
+   /* 0b0110, */
+   /* 0b1001, */
+   /* 0b0111, */
+   /* 0b0001, */
+   0b1110,
+   0b0000,
+   0b0000,
+   0b0000,   
+ }
 };
 
 // =========================================================
@@ -158,11 +398,13 @@ typedef struct Snake {
 
 Snake snake;
 // location of pills
-Point pills[20] = {{.x=11,.y=13}};
+Point pills[20] = {{.x=10,.y=7}};
 // Number of pills in play
 uint8_t numberOfPills = 1;
 // Seed for location of next
 uint8_t seed;
+// Game score
+int score = 0;
 
 // =========================================================
 // Misc Stuff
@@ -226,18 +468,18 @@ Direction getCurrentDirection() {
  */
 Point wrap(Point p) {
   // Wrap x position
-  while(p.x < 0) {
-    p.x = p.x + 16;
+  while(p.x < ARENA_MIN_X) {
+    p.x = ARENA_MAX_X;
   }
-  while(p.x > 15) {
-    p.x = p.x - 16;
+  while(p.x > ARENA_MAX_X) {
+    p.x = ARENA_MIN_X;
   }
   // Wrap y position
-  while(p.y < 0) {
-    p.y = p.y + 16;
+  while(p.y < ARENA_MIN_Y) {
+    p.y = ARENA_MAX_Y;
   }
-  while(p.y > 15) {
-    p.y = p.y - 16;
+  while(p.y > ARENA_MAX_Y) {
+    p.y = ARENA_MIN_Y;
   }
   return p;
 }
@@ -262,6 +504,37 @@ Point movePoint(Direction direction, Point p) {
   }
   //
   return wrap(p);
+}
+
+void drawArena() {
+  display_fill(SPACE);  
+  // Draw left-right border
+  for(int i=(ARENA_MIN_X-1);i<=ARENA_MAX_X;++i) {
+    display_draw(i,ARENA_MIN_Y-1,BORDER_LR);    
+    display_draw(i,ARENA_MAX_Y+1,BORDER_LR);
+  }
+  // Draw top-bottom border
+  for(int i=(ARENA_MIN_Y-1);i<=ARENA_MAX_Y;++i) {
+    display_draw(ARENA_MIN_X-1,i,BORDER_TB);    
+    display_draw(ARENA_MAX_X+1,i,BORDER_TB);
+  }
+  // Draw corners
+  display_draw(ARENA_MIN_X-1,ARENA_MIN_Y-1,BORDER_CNR);
+  display_draw(ARENA_MAX_X+1,ARENA_MIN_Y-1,BORDER_CNR);
+  display_draw(ARENA_MIN_X-1,ARENA_MAX_Y+1,BORDER_CNR);
+  display_draw(ARENA_MAX_X+1,ARENA_MAX_Y+1,BORDER_CNR);  
+}
+
+void drawScore(int x, int y, int score) {
+  int base = 1000;
+  //
+  for(int i=0;i!=4;++i) {
+    int d = score / base;
+    display_draw(x,y,d+1);    
+    score = score - (d * base);
+    base = base / 10;
+    x = x + 1;
+  }
 }
 
 // =========================================================
@@ -486,10 +759,10 @@ void insertPill(Point pt) {
  * Attempt to place pill in an empty location
  */
 void placeNextPill() {
-  int gaps = 256 - lengthOfSnake();
+  int gaps = (ARENA_WIDTH * ARENA_HEIGHT) - lengthOfSnake();
   int gap = seed % gaps;
-  for(int x=0;x<16;++x) {
-    for(int y=0;y<16;++y) {
+  for(int x=ARENA_MIN_X;x<=ARENA_MAX_X;++x) {
+    for(int y=ARENA_MIN_Y;y<=ARENA_MAX_Y;++y) {
       Point p = {.x=x,.y=y};
       if(gap == 0) {
 	insertPill(p);
@@ -565,7 +838,13 @@ void resetGame() {
   snake.head.y = 4;
   snake.numberOfSections = 1;
   snake.sections[0].direction = EAST;
-  snake.sections[0].length = 7;
+  snake.sections[0].length = 3;
+  // Reset the score
+  score = 0;
+  // Redraw the display
+  drawArena();
+  drawScore(DISPLAY_WIDTH-4,0,score);
+  drawScore(DISPLAY_WIDTH-4,1,score);  
 }
 
 // =========================================================
@@ -573,7 +852,6 @@ void resetGame() {
 // =========================================================
 
 void gameOver() {
-  display_fill(0);
   resetGame();
   _delay_ms(1000);
 }
@@ -586,16 +864,24 @@ void clock(int buttons) {
   // Check for change of direction
   updateDirection(buttons);
   // Move snake in current direction
-  moveSnake();        
-  // Draw snake
-  display_fill(0);
+  moveSnake();
+  // Draw Arena
+  drawArena();  
+  // Draw Score Line
+  drawScore(DISPLAY_WIDTH-4,0,score);
+  drawScore(DISPLAY_WIDTH-4,1,score);
+  // Draw Snake
   drawSnake();
+  // Draw pills
   drawPills();
-  display_refresh(sprites);
+  display_refresh_partial(0,1,digit_sprites_top);
+  display_refresh_partial(1,2,digit_sprites_bottom);
+  display_refresh_partial(2,DISPLAY_HEIGHT,arena_sprites);
   // Check for self collision
   if(isTouchingSelf()) {
     gameOver();
   } else if(isEatingPill()) {
+    score = score + 10;
     // Length last section of snake
     lengthenSection(lastSection());
     // Place a new pill
@@ -610,7 +896,7 @@ int main() {
   while(1) {
     int buttons = 0;
     // delay loop
-    for(int i=0;i<1000;++i) {
+    for(int i=0;i<500;++i) {
       for(int j=0;j<100;++j) {      
 	// record any buttons pressed between frames
 	buttons |= read_buttons();

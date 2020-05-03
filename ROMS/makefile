@@ -7,13 +7,14 @@ AVRDUDE = avrdude $(PROGRAMMER) -p $(DEVICE)
 COMPILE = avr-gcc -Wall -Os -std=c99 -DF_CPU=$(CLOCK) -mmcu=$(DEVICE)
 
 TARGETS = fader.hex sokoban.hex tetris.hex snake.hex
+DEPS = tinyboy.h
 
 all: $(TARGETS)
 
-%.s : %.c
+%.s : %.c $(DEPS)
 	$(COMPILE) -S -o $@ $<
 
-%.o : %.c
+%.o : %.c $(DEPS)
 	$(COMPILE) -c -o $@ $<
 
 %.elf: %.o
@@ -21,7 +22,7 @@ all: $(TARGETS)
 
 %.hex: %.elf
 	avr-objcopy -j .text -j .data -O ihex $< $@
-	avr-size --format=avr --mcu=$(DEVICE) $<
+	#avr-size --mcu=$(DEVICE) $<
 
 clean:
 	rm -f *.hex *.elf *.o *.map

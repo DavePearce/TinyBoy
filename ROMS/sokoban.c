@@ -1,6 +1,6 @@
 #include <avr/io.h>
 #include <util/delay.h>
-#include "tinyboy2.h"
+#include "tinyboy.h"
 
 // =========================================================
 // Types

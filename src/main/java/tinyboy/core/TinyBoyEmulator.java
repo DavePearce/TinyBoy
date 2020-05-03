@@ -24,6 +24,8 @@ import javr.util.IdealWire;
  *
  */
 public class TinyBoyEmulator {
+	public static final int DISPLAY_WIDTH = 80;
+	public static final int DISPLAY_HEIGHT = 48;
 	/**
 	 * The ATtiny85 Microcontroller which underpins the TinyBoy.
 	 */
@@ -42,7 +44,7 @@ public class TinyBoyEmulator {
 		this.avr = AvrConfiguration.instantiate("ATtiny85");
 		// NOTE: we connect the display MISO and SS to LOW as they are not needed in
 		// this design, thereby freeing up pins for the button pad.
-		this.display = new DotMatrixDisplay(64, 64,
+		this.display = new DotMatrixDisplay(80, 48,
 				new Wire[] { avr.getPin("SCK"), avr.getPin("MOSI"), Wire.LOW, Wire.LOW });
 		this.pad = new ControlPad(avr.getPin("PB1"), avr.getPin("PB3"), avr.getPin("PB4"), avr.getPin("PB5"));
 	}
@@ -57,7 +59,7 @@ public class TinyBoyEmulator {
 	 * @return
 	 */
 	public int getDisplayWidth() {
-		return 64;
+		return DISPLAY_WIDTH;
 	}
 
 	/**
@@ -66,7 +68,7 @@ public class TinyBoyEmulator {
 	 * @return
 	 */
 	public int getDisplayHeight() {
-		return 64;
+		return DISPLAY_HEIGHT;
 	}
 
 	/**

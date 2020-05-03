@@ -17,11 +17,16 @@ int read_buttons() {
   return PINB & BUTTON_MASK;
 }
 
+#define SCREEN_WIDTH 80
+#define SCREEN_HEIGHT 48
+#define DISPLAY_WIDTH (SCREEN_WIDTH >> 2)
+#define DISPLAY_HEIGHT (SCREEN_HEIGHT >> 2)
+
 /**
  * Display buffer holds current state of display waiting to be written
  * out.
  */
-uint8_t _display[16][8];
+uint8_t _display[DISPLAY_WIDTH][DISPLAY_HEIGHT >> 1];
 
 /**
  * Write 8 bits to display.
@@ -43,7 +48,7 @@ void display_write(uint8_t c) {
  */
 void display_draw(int x, int y, uint8_t sprite) {
   // Santiy check location
-  if(x >= 0 && x < 16 && y >= 0 && y < 16) {
+  if(x >= 0 && x < DISPLAY_WIDTH && y >= 0 && y < DISPLAY_HEIGHT) {
     int yd = y >> 1;
     int ym = y & 0b01;
     uint8_t val = _display[x][yd];
@@ -60,7 +65,7 @@ void display_draw(int x, int y, uint8_t sprite) {
 
 uint8_t display_read(int x, int y) {
   // Santiy check location
-  if(x >= 0 && x < 16 && y >= 0 && y < 16) {
+  if(x >= 0 && x < DISPLAY_WIDTH && y >= 0 && y < DISPLAY_HEIGHT) {
     int yd = y >> 1;
     int ym = y & 0b01;
     uint8_t val = _display[x][yd];
@@ -81,20 +86,22 @@ void display_fill(uint8_t c) {
   // Duplicate character  
   c = (c << 4) | c;
   // Bitblast it out
-  for(int i=0;i<16;++i) {
-    for(int j=0;j<8;++j) {
+  for(int i=0;i<DISPLAY_WIDTH;++i) {
+    for(int j=0;j<(DISPLAY_HEIGHT>>1);++j) {
       _display[i][j] = c;
     }
   }
 }
 
 /**
- * Write out display contents to device, using a given set of sprites.
+ * Write out display contents to device, using a given set of sprites
+ * and starting from a given Y position.  This allows one to use
+ * different sprite sets for different lines.
  */
-void display_refresh(uint8_t sprites[][4]) {
-  for(int y=0;y<16;++y) {
+void display_refresh_partial(int y_start, int y_end, uint8_t sprites[][4]) {
+  for(int y=y_start;y<y_end;++y) {
     for(int sy=0;sy<4;++sy) {
-      for(int x=0;x<16;x+=2) {
+      for(int x=0;x<DISPLAY_WIDTH;x+=2) {
 	uint8_t c1 = display_read(x,y);
 	uint8_t c2 = display_read(x+1,y);
 	uint8_t *sl = sprites[c1];
@@ -105,3 +112,11 @@ void display_refresh(uint8_t sprites[][4]) {
     }
   }
 }
+
+/**
+ * Write out display contents to device, using a given set of sprites.
+ */
+void display_refresh(uint8_t sprites[][4]) {
+  display_refresh_partial(0,DISPLAY_HEIGHT,sprites);
+}
+
