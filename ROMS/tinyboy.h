@@ -48,34 +48,28 @@ void display_write(uint8_t c) {
  */
 void display_draw(int x, int y, uint8_t sprite) {
   // Santiy check location
-  if(x >= 0 && x < DISPLAY_WIDTH && y >= 0 && y < DISPLAY_HEIGHT) {
-    int yd = y >> 1;
-    int ym = y & 0b01;
-    uint8_t val = _display[x][yd];
-    if(ym == 1) {
-      val &= 0b00001111;
-      val |= (sprite << 4);
-    } else {
-      val &= 0b11110000;
-      val |= sprite;
-    }
-    _display[x][yd] = val;
+  int yd = y >> 1;
+  int ym = y & 0b01;
+  uint8_t val = _display[x][yd];
+  if(ym == 1) {
+    val &= 0b00001111;
+    val |= (sprite << 4);
+  } else {
+    val &= 0b11110000;
+    val |= sprite;
   }
+  _display[x][yd] = val;
 }
 
 uint8_t display_read(int x, int y) {
   // Santiy check location
-  if(x >= 0 && x < DISPLAY_WIDTH && y >= 0 && y < DISPLAY_HEIGHT) {
-    int yd = y >> 1;
-    int ym = y & 0b01;
-    uint8_t val = _display[x][yd];
-    if(ym == 1) {
-      return (val >> 4) & 0b00001111;
-    } else {
-      return val & 0b00001111;
-    }
+  int yd = y >> 1;
+  int ym = y & 0b01;
+  uint8_t val = _display[x][yd];
+  if(ym == 1) {
+    return (val >> 4) & 0b00001111;
   } else {
-    return -1;
+    return val & 0b00001111;
   }
 }
 

@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <avr/io.h>
 #include <util/delay.h>
 #include <math.h>
@@ -275,11 +276,6 @@ typedef struct Point {
   int y;
 } Point;
 
-typedef int bool;
-
-#define FALSE 0
-#define TRUE 1
-
 /**
  * Represents a single section within a snake.
  */
@@ -490,7 +486,7 @@ bool isPointInSection(Point p, Point from, Section section) {
     int e = max(from.x, to.x);
     return s <= p.x && p.x <= e;
   } else {
-    return FALSE;
+    return false;
   }
 }
 
@@ -501,10 +497,10 @@ bool isPointInSnake(Point p) {
   for(int i=0;i!=snake.numberOfSections;i++) {
     Section section = snake.sections[i];
     if(isPointInSection(p,snake.head,section)) {
-      return TRUE;
+      return true;
     }
   }
-  return FALSE;
+  return false;
 }
 
 /**
@@ -518,12 +514,12 @@ bool isTouchingSelf() {
     // Ignore first section, since the head always
     // intersects this!
     if(i != 0 && isPointInSection(head,p,section)) {
-      return TRUE;
+      return true;
     } else {
       p = getEndPoint(p,section);
     }
   }
-  return FALSE;
+  return false;
 }
 
 void drawSnakeBody(Point from, Point to) {
