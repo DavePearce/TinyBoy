@@ -318,7 +318,7 @@ Point pills[20] = {{.x=10,.y=7}};
 // Number of pills in play
 uint8_t numberOfPills = 1;
 // Seed for location of next
-uint8_t seed;
+uint8_t seed = 23;
 // Game score
 int score = 0;
 
@@ -675,6 +675,7 @@ void insertPill(Point pt) {
  * Attempt to place pill in an empty location
  */
 void placeNextPill() {
+  seed = seed + 57;
   int gaps = (ARENA_WIDTH * ARENA_HEIGHT) - lengthOfSnake();
   int gap = seed % gaps;
   for(int x=ARENA_MIN_X;x<=ARENA_MAX_X;++x) {
@@ -816,8 +817,6 @@ int main() {
       for(int j=0;j<100;++j) {      
 	// record any buttons pressed between frames
 	buttons |= read_buttons();
-	// Increment seed
-	seed = seed + 1;
       }
     }
     // refresh

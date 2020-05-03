@@ -407,7 +407,6 @@ uint8_t SCORE_WORD[] = {8,1,6,7,2,9,0};
 // Global State
 // =======================================
 
-int state = RESTART;
 int sprite = 1;
 int piece_num = 0;
 uint8_t piece[4];
@@ -662,87 +661,102 @@ void setup() {
   PORTB = 0b00000000;
 }
 
-void clock(int buttons){
-  switch(state) {
-  case RESTART:
-    draw_arena();    
-    fill_arena(BOX_3);
-    refresh();
-    _delay_ms(50);
-    fill_arena(EMPTY);    
-    state = LANDED;
-    lines = 0;
-    score = 0;    
-    break;
-  case LANDED:
-    // Check whether any lines taken
-    check_lines();
-    //
-    initialise_piece(piece,piece_num);
-    piece_num = (piece_num + 1) % 6;
-    // Clear old next piece
-    draw_at(DISPLAY_WIDTH-5,9,next_piece,EMPTY);    
-    initialise_piece(next_piece,piece_num);
-    sprite = (sprite + 1) % 3;
-    // Draw new next piece
-    draw_at(DISPLAY_WIDTH-5,9,next_piece,1 + ((sprite+1) % 3));
-    // Draw score
-    draw_word(ARENA_MAX_X+2,0,SCORE_WORD);
-    draw_word(ARENA_MAX_X+2,1,SCORE_WORD);    
-    draw_num(DISPLAY_WIDTH-4,2,score);
-    draw_num(DISPLAY_WIDTH-4,3,score);
-    // Draw lines
-    draw_word(ARENA_MAX_X+2,4,LINES_WORD);
-    draw_word(ARENA_MAX_X+2,5,LINES_WORD);    
-    draw_num(DISPLAY_WIDTH-4,6,lines);
-    draw_num(DISPLAY_WIDTH-4,7,lines);    
-    // Update state
-    state = PLAYING;
-    // Configure position of next piece
-    x = (ARENA_MIN_X + ARENA_MAX_X) >> 1;
-    y = ARENA_MIN_Y - 2;
-    break;
-  case PLAYING:
-    // First, take piece off board
-    draw_at(x,y,piece,EMPTY);    
-    // Now, apply user actions
-    if(buttons & BUTTON_UP) {
-      rotate(piece);
-    }
-    if(buttons & BUTTON_DOWN) {
-      while(next_state(piece,x,y) != LANDED) {
-	y = y + 1;
-      }
-    }
-    if((buttons & BUTTON_LEFT)) {
-      if(next_state(piece,x-1,y) == PLAYING) {
-	x = x - 1;
-      }
-    }
-    if(buttons & BUTTON_RIGHT) {
-      if(next_state(piece,x+1,y) == PLAYING) {
-	x = x + 1;
-      }
-    }
-    // Update the game state
-    state = next_state(piece,x,y);
-    // Now, apply gravity (if possible)
-    if(state == PLAYING) {
-      // Gravity applies!
+/**
+ * Move the piece on the board
+ */
+int move_piece(int buttons) {
+  // Now, apply user actions
+  if(buttons & BUTTON_UP) {
+    rotate(piece);
+  }
+  if(buttons & BUTTON_DOWN) {
+    while(next_state(piece,x,y) != LANDED) {
       y = y + 1;
     }
-    // Third put piece on board in 
-    // new position
-    draw_at(x,y,piece,sprite+1);
-    // Refresh display
-    refresh();
+  }
+  if((buttons & BUTTON_LEFT)) {
+    if(next_state(piece,x-1,y) == PLAYING) {
+      x = x - 1;
+    }
+  }
+  if(buttons & BUTTON_RIGHT) {
+    if(next_state(piece,x+1,y) == PLAYING) {
+      x = x + 1;
+    }
+  }
+  // Update the game state
+  int state = next_state(piece,x,y);
+  // Now, apply gravity (if possible)
+  if(state == PLAYING) {
+    // Gravity applies!
+    y = y + 1;
+  }  
+  //
+  return state;
+}
+
+void land_piece() {
+  // Check whether any lines taken
+  check_lines();
+  //
+  initialise_piece(piece,piece_num);
+  piece_num = (piece_num + 1) % 6;
+  // Clear old next piece
+  draw_at(DISPLAY_WIDTH-5,9,next_piece,EMPTY);    
+  initialise_piece(next_piece,piece_num);
+  sprite = (sprite + 1) % 3;
+  // Draw new next piece
+  draw_at(DISPLAY_WIDTH-5,9,next_piece,1 + ((sprite+1) % 3));
+  // Draw score
+  draw_word(ARENA_MAX_X+2,0,SCORE_WORD);
+  draw_word(ARENA_MAX_X+2,1,SCORE_WORD);    
+  draw_num(DISPLAY_WIDTH-4,2,score);
+  draw_num(DISPLAY_WIDTH-4,3,score);
+  // Draw lines
+  draw_word(ARENA_MAX_X+2,4,LINES_WORD);
+  draw_word(ARENA_MAX_X+2,5,LINES_WORD);    
+  draw_num(DISPLAY_WIDTH-4,6,lines);
+  draw_num(DISPLAY_WIDTH-4,7,lines);    
+  // Configure position of next piece
+  x = (ARENA_MIN_X + ARENA_MAX_X) >> 1;
+  y = ARENA_MIN_Y - 2;
+}
+
+void restart_game() {
+  draw_arena();    
+  fill_arena(BOX_3);
+  refresh();
+  _delay_ms(50);
+  fill_arena(EMPTY);    
+  lines = 0;
+  score = 0;
+  //
+  land_piece();
+}
+
+void clock(int buttons){
+  // Take piece off board
+  draw_at(x,y,piece,EMPTY);      
+  // Move piece
+  int state = move_piece(buttons);
+  // Draw piece in new position
+  draw_at(x,y,piece,sprite+1);
+  // Refresh display
+  refresh();
+  // See what happened
+  switch(state) {
+  case RESTART:
+    restart_game();
+    break;
+  case LANDED:
+    land_piece();
     break;
   }      
 }
 
 int main() {
   setup();
-  draw_arena();
+  restart_game();
   //
   while(1) {
     int buttons = 0;
