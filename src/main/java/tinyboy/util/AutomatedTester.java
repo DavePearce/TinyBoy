@@ -2,10 +2,15 @@ package tinyboy.util;
 
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.function.Supplier;
 
 import javr.core.AVR;
@@ -30,18 +35,57 @@ import tinyboy.core.TinyBoyEmulator;
  *
  */
 public class AutomatedTester<T extends Iterator<Boolean>> {
-	private final ExtendedTinyBoyEmulator tinyBoy;
-	private final HexFile firmware;
-	private final InputGenerator<T> generator;
+	/**
+	 * Construct a thread pool to use for parallel processing.
+	 */
+	private static final ExecutorService executor = Executors.newCachedThreadPool();
 
-	public AutomatedTester(HexFile firmware, InputGenerator<T> generator, boolean gui) {
-		this.tinyBoy = createTinyBoy(gui);
+	/**
+	 * TinyBoy instance being fuzzed
+	 */
+	private final ExtendedTinyBoyEmulator[] tinyBoys;
+	/**
+	 * Firmware image to be fuzzed.
+	 */
+	private final HexFile firmware;
+	/**
+	 * Input generate to drive fuzzing.
+	 */
+	private final InputGenerator<T> generator;
+	/**
+	 * Number of threads to use for parallel processing.
+	 */
+	private final int nthreads;
+	/**
+	 * Batch size to use for each thread.
+	 */
+	private final int batchSize;
+
+	public AutomatedTester(HexFile firmware, InputGenerator<T> generator, boolean gui, int nthreads, int batchSize) {
 		this.firmware = firmware;
 		this.generator = generator;
+		this.tinyBoys = new ExtendedTinyBoyEmulator[nthreads];
+		for(int i=0;i!=tinyBoys.length;++i) {
+			ExtendedTinyBoyEmulator ith = createTinyBoy(gui);
+			this.tinyBoys[i] = ith;
+			if(gui) {
+				JPeripheral view = ith.getView();
+				int x = view.getX();
+				int y = view.getY();
+				view.setLocation(x + (50*i), y + (50*i));
+			}
+		}
+		this.nthreads = nthreads;
+		this.batchSize = batchSize;
 	}
 
-	public TinyBoyEmulator getTinyBoy() {
-		return tinyBoy;
+	/**
+	 * Destroy all tinyboy instances created.
+	 */
+	public void destroy() {
+		for(int i=0;i!=tinyBoys.length;++i) {
+			tinyBoys[i].destroy();
+		}
 	}
 
 	/**
@@ -59,34 +103,75 @@ public class AutomatedTester<T extends Iterator<Boolean>> {
 	 * @param target
 	 *            The target coverage and, once achieved, testing will stop.
 	 * @return
+	 * @throws ExecutionException
+	 * @throws InterruptedException
 	 */
-	public CoverageAnalysis run(int iterations, int cycles, double target) {
+	public CoverageAnalysis run(double target) throws InterruptedException, ExecutionException {
+		long time = System.currentTimeMillis();
+		// Construct temporary memory areas
+		Iterator<Boolean>[][] arrays = new Iterator[nthreads][batchSize];
+		Future<Result[]>[] threads = new Future[nthreads];
 		CoverageAnalysis analysis = new CoverageAnalysis(firmware);
-		int i = 0;
-		while (analysis.getBranchCoverage() < target && i < iterations) {
-			T inputs = generator.generate();
-			//
-			if (inputs != null) {
-				// Perform the test
-				Result r = fuzzTest(inputs, cycles);
-				BitSet covered = r.getCoverage();
-				// Insure only instructions returned.
-				covered.and(analysis.getReachableInstructions());
-				// Register the output with the generator so that it can refine its strategy
-				// based on this.
-				generator.record(inputs, r.getCoverage(), r.getState());
-				// Record the output with the coverage analysis so that we can subsequently
-				// compute coverage data.
-				analysis.record(covered);
-			} else {
-				break;
+		System.err.println("Initialised " + nthreads + " worker threads.");
+		int iteration = 0;
+		while (analysis.getBranchCoverage() < target && generator.hasMore()) {
+			// Create next batch
+			for (int i = 0; i != nthreads; ++i) {
+				copyToArray(arrays[i], generator);
 			}
-			i = i + 1;
+			// Submit next batch for process
+			for (int i = 0; i != nthreads; ++i) {
+				final ExtendedTinyBoyEmulator tinyBoy = tinyBoys[i];
+				final Iterator<Boolean>[] batch = arrays[i];
+				threads[i] = executor.submit(() -> fuzzTest(tinyBoy,batch));
+			}
+			// Join all back together
+			for (int i = 0; i != nthreads; ++i) {
+				Result[] results = threads[i].get();
+				final Iterator<Boolean>[] batch = arrays[i];
+				for(int j=0;j!=results.length;++j) {
+					Result r = results[j];
+					if(r != null) {
+						// Result can be null for incomplete batches.
+						BitSet covered = r.getCodeExecuted();
+						// Insure only instructions returned.
+						covered.and(analysis.getReachableInstructions());
+						// Register the output with the generator so that it can refine its strategy
+						// based on this.
+						generator.record((T) batch[j], r.getCodeExecuted(), r.getState());
+						// Record the output with the coverage analysis so that we can subsequently
+						// compute coverage data.
+						analysis.record(covered);
+						// Update iteration count
+						iteration = iteration + 1;
+					}
+				}
+			}
+			long t = System.currentTimeMillis() - time;
+			double rate = Math.round((((double)iteration) / t) * 10000) / 10.0D;
+			System.err.println("Processed " + iteration + " inputs @ " + rate + " inputs/s with coverage "
+					+ Math.round(analysis.getBranchCoverage()) + "%");
 		}
-		System.out.println("Processed: " + i + " inputs");
 		return analysis;
 	}
 
+	/**
+	 * Fuzz test a given batch of inputs.
+	 *
+	 * @param inputs
+	 * @param cycles
+	 * @return
+	 */
+	private Result[] fuzzTest(ExtendedTinyBoyEmulator tinyBoy, Iterator<Boolean>[] inputs) {
+		Result[] r = new Result[inputs.length];
+		for(int i=0;i!=r.length;++i) {
+			Iterator<Boolean> input = inputs[i];
+			if(input != null) {
+				r[i] = fuzzTest(tinyBoy,input);
+			}
+		}
+		return r;
+	}
 	/**
 	 * Actually fuzz test the TinyBoy with a given sequence of input values.
 	 *
@@ -94,24 +179,26 @@ public class AutomatedTester<T extends Iterator<Boolean>> {
 	 * @return
 	 * @throws HaltedException
 	 */
-	private Result fuzzTest(Iterator<Boolean> input, int cycles) {
+	private Result fuzzTest(ExtendedTinyBoyEmulator tinyBoy, Iterator<Boolean> input) {
 		// Reset the tiny boy
 		tinyBoy.reset();
 		tinyBoy.upload(firmware);
 		tinyBoy.bind(input);
-		// Attach the instrumentation
+		// Responsible for determining code locations which were read. This will include
+		// all those which represent data.
 		ReadWriteInstrument instrument = new ReadWriteInstrument();
+		// Register instrumentation
 		tinyBoy.getAVR().getCode().register(instrument);
 		// Keep going until input is exhausted
 		try {
-			while(input.hasNext() && cycles > 0) {
+			while(input.hasNext()) {
 				tinyBoy.clock();
-				cycles = cycles - 1;
 			}
 		} catch (HaltedException e) {
 		}
-		// Remove the instrumentation
+		// Remove instrumentation
 		tinyBoy.getAVR().getCode().unregister(instrument);
+		//
 		byte[] data = toByteArray(tinyBoy.getAVR().getData());
 		// Extract the coverage data
 		return new Result(instrument.getReads(),data);
@@ -128,51 +215,50 @@ public class AutomatedTester<T extends Iterator<Boolean>> {
 		wires[ControlPad.Button.DOWN.ordinal()] = new SymbolicPullWire("PB3", "PCINT3", "XTAL1", "CLK1", "!OC1B", "ADC3");
 		wires[ControlPad.Button.LEFT.ordinal()] = new SymbolicPullWire("PB4", "PCINT4", "XTAL2", "CLK0", "OC1B", "ADC2");
 		wires[ControlPad.Button.RIGHT.ordinal()] = new SymbolicPullWire("PB5", "PCINT5", "!RESET", "ADC0", "dW");
-		if(!gui) {
-			return new ExtendedTinyBoyEmulator(wires);
-		} else {
-			return new ExtendedTinyBoyEmulator(wires) {
-				private final JPeripheral view = new TinyBoyPeripheral(this);
+		return new ExtendedTinyBoyEmulator(wires,gui);
+	}
 
-				@Override
-				public void clock() throws HaltedException {
-					final AVR mcu = this.getAVR();
-					// Clock peripheral first
-					view.clock();
-					// Clock AVR second
-					mcu.clock();
-				}
-
-				@Override
-				public void destroy() {
-					view.setVisible(false);
-					view.dispose();
-				}
-
-				@Override
-				public boolean getButtonState(ControlPad.Button button) {
-					// NOTE: this override is necessary to prevent the GUI from generating read
-					// requests on the I/O pins representing the buttons which, in turn, interfer
-					// with our input streams.
-					return false;
-				}
-			};
+	/**
+	 * Pull inputs from the generator into one or more batches for execution.
+	 * @param <T>
+	 * @param array
+	 * @param b
+	 * @return
+	 */
+	private static <T extends Iterator<Boolean>> int copyToArray(Iterator<Boolean>[] array, InputGenerator<T> b) {
+		int i = 0;
+		// Read items into array
+		while (b.hasMore() && i < array.length) {
+			array[i++] = b.generate();
 		}
+		// Reset any trailing items
+		Arrays.fill(array,i,array.length,null);
+		// Done
+		return i;
 	}
 
 	private static class ExtendedTinyBoyEmulator extends TinyBoyEmulator {
 		private final SymbolicPullWire[] wires;
+		private final JPeripheral view;
 
-
-		public ExtendedTinyBoyEmulator(SymbolicPullWire[] wires) {
+		public ExtendedTinyBoyEmulator(SymbolicPullWire[] wires, boolean gui) {
 			super(labels -> getWire(wires,labels));
 			this.wires = wires;
+			if(gui) {
+				this.view = new TinyBoyPeripheral(this);
+			} else {
+				this.view = null;
+			}
 		}
 
 		public void bind(Iterator<Boolean> input) {
 			for(int i=0;i!=wires.length;++i) {
 				wires[i].bind(input);
 			}
+		}
+
+		public JPeripheral getView() {
+			return view;
 		}
 
 		private static Wire getWire(SymbolicPullWire[] wires, String[] labels) {
@@ -188,6 +274,33 @@ public class AutomatedTester<T extends Iterator<Boolean>> {
 			default:
 				return new IdealWire(labels);
 			}
+		}
+
+		@Override
+		public void clock() throws HaltedException {
+			final AVR mcu = this.getAVR();
+			if(view != null) {
+				// Clock peripheral first
+				view.clock();
+			}
+			// Clock AVR second
+			mcu.clock();
+		}
+
+		@Override
+		public void destroy() {
+			if(view != null) {
+				view.setVisible(false);
+				view.dispose();
+			}
+		}
+
+		@Override
+		public boolean getButtonState(ControlPad.Button button) {
+			// NOTE: this override is necessary to prevent the GUI from generating read
+			// requests on the I/O pins representing the buttons which, in turn, interfer
+			// with our input streams.
+			return false;
 		}
 	}
 
@@ -313,6 +426,13 @@ public class AutomatedTester<T extends Iterator<Boolean>> {
 		 * @param output
 		 */
 		public void record(T input, BitSet output, byte[] state);
+
+		/**
+		 * Indicates whether or not the generator is finished.
+		 *
+		 * @return
+		 */
+		public boolean hasMore();
 	}
 
 	/**
@@ -321,25 +441,35 @@ public class AutomatedTester<T extends Iterator<Boolean>> {
 	 * @author djp
 	 *
 	 */
-	public class Result {
+	public static class Result {
 		/**
-		 * Instructions covered by this run.
+		 * Code locations executed during a given run
 		 */
-		private final BitSet coverage;
+		private final BitSet code;
 		/**
 		 * State of machine memory at end of run.
 		 */
 		private final byte[] state;
 
 		public Result(BitSet coverage, byte[] state) {
-			this.coverage = coverage;
+			this.code = coverage;
 			this.state = state;
 		}
 
-		public BitSet getCoverage() {
-			return coverage;
+		/**
+		 * Get the set of code locations executed during this run.
+		 *
+		 * @return
+		 */
+		public BitSet getCodeExecuted() {
+			return code;
 		}
 
+		/**
+		 * Get the state of memory at the end of the this run.
+		 *
+		 * @return
+		 */
 		public byte[] getState() {
 			return state;
 		}
