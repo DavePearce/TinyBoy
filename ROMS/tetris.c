@@ -584,11 +584,11 @@ void draw_at(int x, int y, uint8_t data[], uint8_t color) {
 void draw_arena() {
   display_fill(EMPTY);
   // Draw left-right border
-  for(int i=(ARENA_MIN_X-1);i<=ARENA_MAX_X;++i) {
+  for(int i=ARENA_MIN_X;i<=ARENA_MAX_X;++i) {
     display_draw(i,ARENA_MAX_Y+1,BORDER_LR);
   }
   // Draw top-bottom border
-  for(int i=(ARENA_MIN_Y-1);i<=ARENA_MAX_Y;++i) {
+  for(int i=ARENA_MIN_Y;i<=ARENA_MAX_Y;++i) {
     display_draw(ARENA_MIN_X-1,i,BORDER_TB);    
     display_draw(ARENA_MAX_X+1,i,BORDER_TB);
   }
