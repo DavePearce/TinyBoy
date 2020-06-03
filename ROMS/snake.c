@@ -385,17 +385,17 @@ Direction getCurrentDirection() {
 Point wrap(Point p) {
   // Wrap x position
   while(p.x < ARENA_MIN_X) {
-    p.x = ARENA_MAX_X;
+    p.x += ARENA_WIDTH;
   }
   while(p.x > ARENA_MAX_X) {
-    p.x = ARENA_MIN_X;
+    p.x -= ARENA_WIDTH;
   }
   // Wrap y position
   while(p.y < ARENA_MIN_Y) {
-    p.y = ARENA_MAX_Y;
+    p.y += ARENA_HEIGHT;
   }
   while(p.y > ARENA_MAX_Y) {
-    p.y = ARENA_MIN_Y;
+    p.y -= ARENA_HEIGHT;
   }
   return p;
 }
@@ -472,7 +472,7 @@ Point getEndPoint(Point start, Section section) {
       start.x += section.length;
       break;
    }
-   return start;
+  return start;
 }
 
 bool isPointInSection(Point p, Point from, Section section) {
@@ -548,7 +548,7 @@ Point drawSnakeHead(Point from, Section s1) {
   Point to = getEndPoint(from,s1);
   drawSnakeBody(from,to);  
   display_draw(from.x,from.y,HEAD_N + s1.direction);
-  return to;
+  return wrap(to);
 }
 
 #define NORTHEAST (NORTH + (EAST << 2))
@@ -589,7 +589,7 @@ Point drawSnakeSection(Point from, Section s0, Section s1) {
    Point to = getEndPoint(from,s1);
    drawSnakeBody(from,to);
    drawSnakeJoint(from,s0.direction,s1.direction);
-   return to;
+   return wrap(to);
 }
 
 void drawSnake() {
