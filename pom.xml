@@ -6,7 +6,7 @@
   <!-- ============================================== -->
   
   <groupId>whiley</groupId>
-  <artifactId>TinyBoy</artifactId>
+  <artifactId>tinyboy</artifactId>
   <version>1.0</version>
 
   <scm>
