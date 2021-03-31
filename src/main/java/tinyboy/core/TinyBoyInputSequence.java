@@ -4,6 +4,9 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.function.Supplier;
 
+import org.eclipse.jdt.annotation.NonNull;
+import org.eclipse.jdt.annotation.Nullable;
+
 import javr.core.AVR;
 import javr.util.BitList;
 
@@ -26,14 +29,14 @@ public class TinyBoyInputSequence implements Iterator<Boolean> {
 	/**
 	 * The sequence of button push pulses.
 	 */
-	private final ControlPad.Button[] pulses;
+	private final ControlPad.@Nullable Button[] pulses;
 
 	/**
 	 * Clock determines where we are in the pulse sequence.
 	 */
 	private int clock = 0;
 
-	public TinyBoyInputSequence(ControlPad.Button... pulses) {
+	public TinyBoyInputSequence(ControlPad.@Nullable Button... pulses) {
 		this.pulses = pulses;
 	}
 
@@ -42,7 +45,7 @@ public class TinyBoyInputSequence implements Iterator<Boolean> {
 	 *
 	 * @param list
 	 */
-	public TinyBoyInputSequence(TinyBoyInputSequence list) {
+	public TinyBoyInputSequence(@NonNull TinyBoyInputSequence list) {
 		this.pulses = Arrays.copyOf(list.pulses, list.pulses.length);
 	}
 
@@ -66,7 +69,7 @@ public class TinyBoyInputSequence implements Iterator<Boolean> {
 	 * Get next input in sequence.
 	 */
 	@Override
-	public Boolean next() {
+	public @NonNull Boolean next() {
 		int n = clock / NUM_INPUTS;
 		int m = clock % NUM_INPUTS;
 		// Increment clock
@@ -88,7 +91,7 @@ public class TinyBoyInputSequence implements Iterator<Boolean> {
 	 * @param pulse
 	 * @return
 	 */
-	public TinyBoyInputSequence append(ControlPad.Button pulse) {
+	public @NonNull TinyBoyInputSequence append(ControlPad.@Nullable Button pulse) {
 		final int len = pulses.length;
 		TinyBoyInputSequence s = new TinyBoyInputSequence(Arrays.copyOf(pulses, len + 1));
 		s.pulses[len] = pulse;
@@ -101,10 +104,10 @@ public class TinyBoyInputSequence implements Iterator<Boolean> {
 	 * @param button
 	 * @return
 	 */
-	public TinyBoyInputSequence append(ControlPad.Button[] nPulses) {
+	public @NonNull TinyBoyInputSequence append(ControlPad.@Nullable Button @NonNull [] nPulses) {
 		final int n = pulses.length;
 		final int m = nPulses.length;
-		ControlPad.Button[] tmp = new ControlPad.Button[n+m];
+		ControlPad.@Nullable Button[] tmp = new ControlPad.@Nullable Button[n+m];
 		// Copy pulses over
 		System.arraycopy(pulses, 0, tmp, 0, n);
 		System.arraycopy(nPulses, 0, tmp, n, nPulses.length);
@@ -114,7 +117,7 @@ public class TinyBoyInputSequence implements Iterator<Boolean> {
 
 
 	@Override
-	public String toString() {
+	public @NonNull String toString() {
 		String r = "";
 		for (int i = 0; i != pulses.length; ++i) {
 			ControlPad.Button pulse = pulses[i];

@@ -13,6 +13,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.function.Supplier;
 
+import org.eclipse.jdt.annotation.NonNull;
+import org.eclipse.jdt.annotation.Nullable;
+
 import javr.core.AVR;
 import javr.core.AVR.HaltedException;
 import javr.core.AvrConfiguration;
@@ -109,7 +112,7 @@ public class AutomatedTester<T extends Iterator<Boolean>> {
 	public CoverageAnalysis run(double target) throws InterruptedException, ExecutionException {
 		long time = System.currentTimeMillis();
 		// Construct temporary memory areas
-		Iterator<Boolean>[][] arrays = new Iterator[nthreads][batchSize];
+		@NonNull Iterator<Boolean>[][] arrays = new @NonNull Iterator[nthreads][batchSize];
 		Future<Result[]>[] threads = new Future[nthreads];
 		CoverageAnalysis analysis = new CoverageAnalysis(firmware);
 		System.err.println("Initialised " + nthreads + " worker threads.");
@@ -128,7 +131,7 @@ public class AutomatedTester<T extends Iterator<Boolean>> {
 			// Join all back together
 			for (int i = 0; i != nthreads; ++i) {
 				Result[] results = threads[i].get();
-				final Iterator<Boolean>[] batch = arrays[i];
+				final @NonNull Iterator<Boolean>[] batch = arrays[i];
 				for(int j=0;j!=results.length;++j) {
 					Result r = results[j];
 					if(r != null) {
@@ -199,9 +202,12 @@ public class AutomatedTester<T extends Iterator<Boolean>> {
 		// Remove instrumentation
 		tinyBoy.getAVR().getCode().unregister(instrument);
 		//
-		byte[] data = toByteArray(tinyBoy.getAVR().getData());
+		byte @NonNull [] data = toByteArray(tinyBoy.getAVR().getData());
 		// Extract the coverage data
-		return new Result(instrument.getReads(),data);
+		BitSet reads = instrument.getReads();
+		assert reads != null;
+		//
+		return new Result(reads,data);
 	}
 
 	/**
@@ -379,7 +385,7 @@ public class AutomatedTester<T extends Iterator<Boolean>> {
 	 * @param memory
 	 * @return
 	 */
-	private byte[] toByteArray(AVR.Memory memory) {
+	private byte @NonNull [] toByteArray(AVR.Memory memory) {
 		byte[] bytes = new byte[memory.size()];
 		for(int i=0;i!=bytes.length;++i) {
 			bytes[i] = memory.peek(i);
@@ -416,7 +422,7 @@ public class AutomatedTester<T extends Iterator<Boolean>> {
 		 *
 		 * @return
 		 */
-		public T generate();
+		public @Nullable T generate();
 
 		/**
 		 * Record the result of a given test. That is, for a generated input, record the
@@ -425,7 +431,7 @@ public class AutomatedTester<T extends Iterator<Boolean>> {
 		 * @param input
 		 * @param output
 		 */
-		public void record(T input, BitSet output, byte[] state);
+		public void record(@NonNull T input, @NonNull BitSet output, byte @NonNull [] state);
 
 		/**
 		 * Indicates whether or not the generator is finished.
@@ -445,13 +451,13 @@ public class AutomatedTester<T extends Iterator<Boolean>> {
 		/**
 		 * Code locations executed during a given run
 		 */
-		private final BitSet code;
+		private final @NonNull BitSet code;
 		/**
 		 * State of machine memory at end of run.
 		 */
-		private final byte[] state;
+		private final byte @NonNull [] state;
 
-		public Result(BitSet coverage, byte[] state) {
+		public Result(@NonNull BitSet coverage, byte @NonNull [] state) {
 			this.code = coverage;
 			this.state = state;
 		}
@@ -461,7 +467,7 @@ public class AutomatedTester<T extends Iterator<Boolean>> {
 		 *
 		 * @return
 		 */
-		public BitSet getCodeExecuted() {
+		public @NonNull BitSet getCodeExecuted() {
 			return code;
 		}
 
@@ -470,7 +476,7 @@ public class AutomatedTester<T extends Iterator<Boolean>> {
 		 *
 		 * @return
 		 */
-		public byte[] getState() {
+		public byte @NonNull [] getState() {
 			return state;
 		}
 	}
