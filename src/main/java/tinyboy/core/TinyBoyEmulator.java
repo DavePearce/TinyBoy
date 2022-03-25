@@ -5,15 +5,9 @@ import java.util.function.Function;
 import javr.core.AVR;
 import javr.core.AVR.HaltedException;
 import javr.core.AvrConfiguration;
-import javr.core.AvrDecoder;
-import javr.core.AvrExecutor;
 import javr.core.Wire;
 import javr.io.HexFile;
-import javr.memory.ByteMemory;
-import javr.memory.IoMemory;
-import javr.memory.MultiplexedMemory;
 import javr.peripherals.DotMatrixDisplay;
-import javr.ports.InputOutputPort;
 import javr.util.IdealWire;
 
 /**
@@ -31,7 +25,7 @@ public class TinyBoyEmulator {
 	/**
 	 * The ATtiny85 Microcontroller which underpins the TinyBoy.
 	 */
-	private final AVR.Instrumentable avr;
+	private final AVR avr;
 	/**
 	 * Represents the dot-matrix display on the TinyBoy.
 	 */
@@ -55,7 +49,7 @@ public class TinyBoyEmulator {
 		this.pad = new ControlPad(avr.getPin("PB1"), avr.getPin("PB3"), avr.getPin("PB4"), avr.getPin("PB5"));
 	}
 
-	public AVR.Instrumentable getAVR() {
+	public AVR getAVR() {
 		return avr;
 	}
 

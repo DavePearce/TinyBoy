@@ -21,6 +21,7 @@ import javr.core.AVR.HaltedException;
 import javr.core.AvrConfiguration;
 import javr.core.Wire;
 import javr.io.HexFile;
+import javr.memory.InstrumentableMemory;
 import javr.memory.instruments.ReadWriteInstrument;
 import javr.util.BitList;
 import javr.util.IdealWire;
@@ -191,7 +192,8 @@ public class AutomatedTester<T extends Iterator<Boolean>> {
 		// all those which represent data.
 		ReadWriteInstrument instrument = new ReadWriteInstrument();
 		// Register instrumentation
-		tinyBoy.getAVR().getCode().register(instrument);
+		InstrumentableMemory code = (InstrumentableMemory) tinyBoy.getAVR().getCode();
+		code.register(instrument);
 		// Keep going until input is exhausted
 		try {
 			while(input.hasNext()) {
@@ -200,7 +202,7 @@ public class AutomatedTester<T extends Iterator<Boolean>> {
 		} catch (HaltedException e) {
 		}
 		// Remove instrumentation
-		tinyBoy.getAVR().getCode().unregister(instrument);
+		code.unregister(instrument);
 		//
 		byte @NonNull [] data = toByteArray(tinyBoy.getAVR().getData());
 		// Extract the coverage data
@@ -250,6 +252,7 @@ public class AutomatedTester<T extends Iterator<Boolean>> {
 		public ExtendedTinyBoyEmulator(SymbolicPullWire[] wires, boolean gui) {
 			super(labels -> getWire(wires,labels));
 			this.wires = wires;
+			this.getAVR().setCode(new InstrumentableMemory(getAVR().getCode()));
 			if(gui) {
 				this.view = new TinyBoyPeripheral(this);
 			} else {
